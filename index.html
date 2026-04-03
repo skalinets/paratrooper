@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paratrooper</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = Math.min(window.innerWidth, 960);
+  canvas.height = Math.min(window.innerHeight, 640);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Tunable settings (editable via in-game menu with S key)
+const settings = {
+  turret: {
+    rotationSpeed: { val: 0.03, min: 0.01, max: 0.1, step: 0.005, label: 'Rotation Speed' },
+    bulletSpeed: { val: 8, min: 2, max: 20, step: 0.5, label: 'Bullet Speed' },
+    bulletSpread: { val: 0.06, min: 0, max: 0.2, step: 0.01, label: 'Bullet Spread' },
+    fireRate: { val: 8, min: 2, max: 30, step: 1, label: 'Fire Rate (frames)' },
+    heatPerShot: { val: 8, min: 1, max: 25, step: 1, label: 'Heat Per Shot' },
+    heatDecay: { val: 0.4, min: 0.1, max: 2, step: 0.1, label: 'Heat Decay' },
+    overheatCooldown: { val: 120, min: 30, max: 300, step: 10, label: 'Overheat Cooldown' },
+  },
+  helicopter: {
+    speed: { val: 1.5, min: 0.3, max: 5, step: 0.1, label: 'Speed' },
+    waveSpeedBonus: { val: 0.1, min: 0, max: 0.5, step: 0.05, label: 'Speed +/Wave' },
+  },
+  paratrooper: {
+    fallSpeed: { val: 0.5, min: 0.1, max: 2, step: 0.05, label: 'Fall Speed' },
+    maxDrift: { val: 1.5, min: 0.3, max: 4, step: 0.1, label: 'Max Drift' },
+    maxLanded: { val: 4, min: 1, max: 10, step: 1, label: 'Max Landed (per side)' },
+  },
+  jet: {
+    speed: { val: 4, min: 1, max: 10, step: 0.5, label: 'Speed' },
+    waveSpeedBonus: { val: 0.3, min: 0, max: 1, step: 0.1, label: 'Speed +/Wave' },
+  },
+  bomb: {
+    fallSpeed: { val: 0.8, min: 0.2, max: 3, step: 0.1, label: 'Fall Speed' },
+    maxDrift: { val: 1, min: 0.2, max: 3, step: 0.1, label: 'Max Drift' },
+  },
+  game: {
+    gravity: { val: 0.04, min: 0.01, max: 0.15, step: 0.005, label: 'Gravity' },
+    comboWindow: { val: 45, min: 10, max: 120, step: 5, label: 'Combo Window (frames)' },
+    powerupInterval: { val: 600, min: 200, max: 1500, step: 50, label: 'Powerup Interval' },
+  },
+};
+
+// Shorthand getters
+function S(category, key) { return settings[category][key].val; }
+
+// Settings menu state
+let settingsOpen = false;
+let settingsCategory = 0;
+let settingsParam = 0;
+const settingsCategories = Object.keys(settings);
+
+// Constants (non-tunable)
+const GUN_LENGTH = 30;
+const MAX_HEAT = 100;
+
+// Game state
+let score = 0;
+let highScore = parseInt(localStorage.getItem('paratrooper_hi') || '0');
+let gameOver = false;
+let gunAngle = -Math.PI / 2;
+let bullets = [];
+let helicopters = [];
+let paratroopers = [];
+let jets = [];
+let bombs = [];
+let explosions = [];
+let floatingTexts = [];
+let landedLeft = 0;
+let landedRight = 0;
+let frame = 0;
+let started = false;
+let gunDestroyed = false;
+let endSequence = false;
+let endSequenceTimer = 0;
+let canRestart = false;
+
+// Wave system
+let wave = 0;
+let waveTimer = 0;
+let waveActive = false;
+let wavePause = 0; // countdown between waves
+let waveHeliCount = 0;
+let waveHelisSpawned = 0;
+let waveJetCount = 0;
+let waveJetsSpawned = 0;
+let waveSpawnTimer = 0;
+let waveAnnounceTimer = 0;
+
+// Heat system
+let heat = 0;
+let overheated = false;
+let overheatTimer = 0;
+
+// Combo system
+let combo = 0;
+let comboTimer = 0;
+
+// Power-up system
+let powerups = []; // falling crates
+let activePowerup = null; // { type, timer }
+const POWERUP_DURATION = 480; // 8 seconds at 60fps
+const POWERUP_TYPES = [
+  { type: 'triple', label: 'TRIPLE SHOT', color: '#4af', symbol: '3' },
+  { type: 'explosive', label: 'EXPLOSIVE', color: '#f84', symbol: 'E' },
+  { type: 'rapid', label: 'RAPID FIRE', color: '#4f4', symbol: 'R' },
+  { type: 'freeze', label: 'FREEZE', color: '#aef', symbol: 'F' },
+  { type: 'nuke', label: 'NUKE!', color: '#f4f', symbol: 'N' },
+];
+let powerupSpawnTimer = 0;
+
+// Gun
+const gun = {
+  get x() { return canvas.width / 2; },
+  get y() { return canvas.height - 20; },
+  baseWidth: 40,
+  baseHeight: 15,
+};
+
+// Stars
+const stars = Array.from({ length: 80 }, () => ({
+  x: Math.random(),
+  y: Math.random() * 0.6,
+  size: Math.random() * 2 + 0.5,
+  twinkle: Math.random() * Math.PI * 2,
+}));
+
+// Input
+const keysDown = {};
+document.addEventListener('keydown', e => {
+  keysDown[e.code] = true;
+
+  // Settings menu
+  if (e.code === 'KeyS') {
+    settingsOpen = !settingsOpen;
+    settingsParam = 0;
+    return;
+  }
+  if (settingsOpen) {
+    e.preventDefault();
+    const cat = settingsCategories[settingsCategory];
+    const params = Object.keys(settings[cat]);
+    if (e.code === 'ArrowUp') {
+      settingsParam--;
+      if (settingsParam < 0) {
+        settingsCategory = (settingsCategory - 1 + settingsCategories.length) % settingsCategories.length;
+        settingsParam = Object.keys(settings[settingsCategories[settingsCategory]]).length - 1;
+      }
+    } else if (e.code === 'ArrowDown') {
+      settingsParam++;
+      if (settingsParam >= params.length) {
+        settingsCategory = (settingsCategory + 1) % settingsCategories.length;
+        settingsParam = 0;
+      }
+    } else if (e.code === 'ArrowLeft' || e.code === 'Comma') {
+      const p = settings[cat][params[settingsParam]];
+      p.val = Math.max(p.min, +(p.val - p.step).toFixed(6));
+    } else if (e.code === 'ArrowRight' || e.code === 'Period') {
+      const p = settings[cat][params[settingsParam]];
+      p.val = Math.min(p.max, +(p.val + p.step).toFixed(6));
+    } else if (e.code === 'Escape') {
+      settingsOpen = false;
+    }
+    return;
+  }
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (gameOver && canRestart) restart();
+    else if (endSequence) return;
+    else if (!started) { started = true; startWave(1); }
+  }
+  if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+    if (gameOver && canRestart) restart();
+    else if (!started) { started = true; startWave(1); }
+  }
+});
+document.addEventListener('keyup', e => { keysDown[e.code] = false; });
+
+let fireTimer = 0;
+
+function shoot() {
+  if (overheated) return;
+  const spd = S('turret','bulletSpeed');
+  const spread = S('turret','bulletSpread');
+  const bx = gun.x + Math.cos(gunAngle) * GUN_LENGTH;
+  const by = gun.y + Math.sin(gunAngle) * GUN_LENGTH;
+  const isExplosive = activePowerup && activePowerup.type === 'explosive';
+
+  if (activePowerup && activePowerup.type === 'triple') {
+    for (let s = -1; s <= 1; s++) {
+      const a = gunAngle + s * 0.12 + (Math.random() - 0.5) * spread;
+      bullets.push({ x: bx, y: by, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, explosive: isExplosive });
+    }
+  } else {
+    const a = gunAngle + (Math.random() - 0.5) * spread;
+    bullets.push({ x: bx, y: by, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, explosive: isExplosive });
+  }
+
+  const heatCost = (activePowerup && activePowerup.type === 'rapid') ? 2 : S('turret','heatPerShot');
+  heat = Math.min(MAX_HEAT, heat + heatCost);
+  if (heat >= MAX_HEAT) {
+    overheated = true;
+    overheatTimer = S('turret','overheatCooldown');
+  }
+}
+
+function addKill(points, x, y) {
+  comboTimer = S('game','comboWindow');
+  combo++;
+  const multiplier = Math.min(combo, 8);
+  const total = points * multiplier;
+  score += total;
+  if (multiplier > 1) {
+    addFloatingText(`${total} x${multiplier}`, x, y, '#ff0');
+  } else {
+    addFloatingText(`+${total}`, x, y, '#fff');
+  }
+}
+
+function addFloatingText(text, x, y, color) {
+  floatingTexts.push({ text, x, y, life: 1, color });
+}
+
+function addExplosion(x, y, size) {
+  explosions.push({ x, y, size, life: 1 });
+}
+
+function explosiveBlast(x, y) {
+  // Damage everything in radius 60
+  const radius = 60;
+  addExplosion(x, y, 40);
+  for (let i = helicopters.length - 1; i >= 0; i--) {
+    const h = helicopters[i];
+    if (Math.hypot(h.x - x, h.y - y) < radius) {
+      addExplosion(h.x, h.y, 25);
+      addKill(50, h.x, h.y);
+      helicopters.splice(i, 1);
+    }
+  }
+  for (let i = jets.length - 1; i >= 0; i--) {
+    const j = jets[i];
+    if (Math.hypot(j.x - x, j.y - y) < radius) {
+      addExplosion(j.x, j.y, 25);
+      addKill(100, j.x, j.y);
+      jets.splice(i, 1);
+    }
+  }
+  for (let i = bombs.length - 1; i >= 0; i--) {
+    const b = bombs[i];
+    if (Math.hypot(b.x - x, b.y - y) < radius) {
+      addExplosion(b.x, b.y, 15);
+      bombs.splice(i, 1);
+    }
+  }
+  for (let i = paratroopers.length - 1; i >= 0; i--) {
+    const p = paratroopers[i];
+    if (!p.landed && Math.hypot(p.x - x, p.y - y) < radius) {
+      addExplosion(p.x, p.y, 12);
+      addKill(25, p.x, p.y);
+      paratroopers.splice(i, 1);
+    }
+  }
+}
+
+// Wave system
+function startWave(n) {
+  wave = n;
+  waveAnnounceTimer = 120; // show wave announcement for 2 seconds
+  wavePause = 0;
+  waveActive = false;
+  // Scaling: more helis and jets each wave
+  waveHeliCount = 3 + Math.floor(wave * 1.5);
+  waveJetCount = wave >= 2 ? Math.floor(wave / 2) : 0;
+  waveHelisSpawned = 0;
+  waveJetsSpawned = 0;
+  waveSpawnTimer = 0;
+}
+
+function spawnHelicopter() {
+  const fromLeft = Math.random() < 0.5;
+  const speed = S('helicopter','speed') + wave * S('helicopter','waveSpeedBonus');
+  helicopters.push({
+    x: fromLeft ? -60 : canvas.width + 60,
+    y: 30 + Math.random() * 70,
+    dir: fromLeft ? 1 : -1,
+    speed,
+    dropTimer: 40 + Math.random() * 60,
+    dropped: false,
+    width: 55,
+    height: 20,
+  });
+}
+
+function spawnJet() {
+  const fromLeft = Math.random() < 0.5;
+  const speed = S('jet','speed') + wave * S('jet','waveSpeedBonus');
+  jets.push({
+    x: fromLeft ? -80 : canvas.width + 80,
+    y: 25 + Math.random() * 40,
+    dir: fromLeft ? 1 : -1,
+    speed,
+    dropped: false,
+    width: 50,
+    height: 14,
+  });
+}
+
+function spawnParatrooper(x, y) {
+  paratroopers.push({
+    x, y, vy: 0.5, vx: 0,
+    chuteOpen: false,
+    chuteTimer: 20 + Math.random() * 20,
+    landed: false, alive: true,
+  });
+}
+
+function startEndSequence() {
+  endSequence = true;
+  endSequenceTimer = 0;
+  bullets = [];
+  paratroopers.forEach(p => {
+    if (p.landed) {
+      p.walking = true;
+      p.targetX = gun.x + (p.x < gun.x ? -20 : 20);
+    }
+  });
+}
+
+function restart() {
+  score = 0;
+  gameOver = false;
+  gunDestroyed = false;
+  endSequence = false;
+  endSequenceTimer = 0;
+  canRestart = false;
+  bullets = [];
+  helicopters = [];
+  paratroopers = [];
+  jets = [];
+  bombs = [];
+  explosions = [];
+  floatingTexts = [];
+  landedLeft = 0;
+  landedRight = 0;
+  frame = 0;
+  heat = 0;
+  overheated = false;
+  overheatTimer = 0;
+  combo = 0;
+  comboTimer = 0;
+  powerups = [];
+  activePowerup = null;
+  powerupSpawnTimer = 0;
+  wave = 0;
+  started = true;
+  startWave(1);
+}
+
+// ---- UPDATE ----
+function update() {
+  if (!started) return;
+
+  // Always update explosions & floating texts
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    explosions[i].life -= 0.04;
+    if (explosions[i].life <= 0) explosions.splice(i, 1);
+  }
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    floatingTexts[i].life -= 0.02;
+    floatingTexts[i].y -= 0.8;
+    if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+  }
+
+  // End sequence
+  if (endSequence) {
+    frame++;
+    endSequenceTimer++;
+    let allArrived = true;
+    paratroopers.forEach(p => {
+      if (p.walking) {
+        const dx = p.targetX - p.x;
+        if (Math.abs(dx) > 2) {
+          p.x += Math.sign(dx) * 1.2;
+          p.walkFrame = (p.walkFrame || 0) + 0.15;
+          allArrived = false;
+        } else { p.walking = false; p.arrived = true; }
+      }
+      if (!p.landed && !p.walking) {
+        p.vy = (p.vy || 0) + S('game','gravity');
+        p.y += p.vy;
+        if (p.y >= canvas.height - 15) { p.y = canvas.height - 15; p.landed = true; }
+      }
+    });
+    if (!gunDestroyed && (allArrived || endSequenceTimer > 200)) {
+      gunDestroyed = true;
+      addExplosion(gun.x, gun.y - 10, 50);
+      addExplosion(gun.x - 15, gun.y - 5, 35);
+      addExplosion(gun.x + 15, gun.y - 5, 35);
+      addExplosion(gun.x, gun.y - 25, 30);
+      paratroopers = paratroopers.filter(p => Math.abs(p.x - gun.x) > 40);
+      endSequenceTimer = 0;
+    }
+    if (gunDestroyed && endSequenceTimer > 60) {
+      gameOver = true;
+      canRestart = true;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('paratrooper_hi', String(highScore));
+      }
+    }
+    return;
+  }
+
+  if (gameOver) return;
+  frame++;
+
+  // Gun angle
+  if (!settingsOpen) {
+    if (keysDown['ArrowLeft']) gunAngle -= S('turret','rotationSpeed');
+    if (keysDown['ArrowRight']) gunAngle += S('turret','rotationSpeed');
+  }
+  if (gunAngle > 0) gunAngle = 0;
+  if (gunAngle < -Math.PI) gunAngle = -Math.PI;
+
+  // Auto-fire while holding Space
+  if (keysDown['Space'] && !endSequence && !settingsOpen) {
+    fireTimer++;
+    if (fireTimer >= S('turret','fireRate')) {
+      fireTimer = 0;
+      shoot();
+    }
+  } else {
+    fireTimer = 999; // fire immediately on next press
+  }
+
+  // Heat decay
+  if (overheated) {
+    overheatTimer--;
+    heat = MAX_HEAT * (overheatTimer / S('turret','overheatCooldown'));
+    if (overheatTimer <= 0) { overheated = false; heat = 0; }
+  } else {
+    heat = Math.max(0, heat - S('turret','heatDecay'));
+  }
+
+  // Combo decay
+  if (comboTimer > 0) {
+    comboTimer--;
+    if (comboTimer <= 0) combo = 0;
+  }
+
+  // Power-up timer
+  if (activePowerup) {
+    activePowerup.timer--;
+    if (activePowerup.timer <= 0) activePowerup = null;
+  }
+
+  // Spawn power-up crates periodically
+  powerupSpawnTimer++;
+  if (powerupSpawnTimer >= S('game','powerupInterval') + Math.random() * 300) {
+    powerupSpawnTimer = 0;
+    const pt = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+    powerups.push({
+      x: 50 + Math.random() * (canvas.width - 100),
+      y: -20,
+      vy: 0.6,
+      type: pt.type,
+      label: pt.label,
+      color: pt.color,
+      symbol: pt.symbol,
+    });
+  }
+
+  // Update power-up crates
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    const pu = powerups[i];
+    pu.y += pu.vy;
+
+    // Off screen
+    if (pu.y > canvas.height + 20) {
+      powerups.splice(i, 1);
+      continue;
+    }
+
+    // Bullet collision - shoot to collect
+    for (let j = bullets.length - 1; j >= 0; j--) {
+      const b = bullets[j];
+      if (Math.abs(b.x - pu.x) < 14 && Math.abs(b.y - pu.y) < 14) {
+        bullets.splice(j, 1);
+        // Activate power-up
+        if (pu.type === 'nuke') {
+          // Nuke: destroy all enemies on screen
+          helicopters.forEach(h => { addExplosion(h.x, h.y, 25); addKill(50, h.x, h.y); });
+          jets.forEach(jt => { addExplosion(jt.x, jt.y, 25); addKill(100, jt.x, jt.y); });
+          bombs.forEach(bm => { addExplosion(bm.x, bm.y, 15); });
+          for (let k = paratroopers.length - 1; k >= 0; k--) {
+            const p = paratroopers[k];
+            if (!p.landed) { addExplosion(p.x, p.y, 12); addKill(25, p.x, p.y); }
+          }
+          paratroopers = paratroopers.filter(p => p.landed);
+          helicopters = [];
+          jets = [];
+          bombs = [];
+          addFloatingText('NUKE!', pu.x, pu.y, '#f4f');
+        } else if (pu.type === 'freeze') {
+          // Freeze: all airborne enemies stop for a duration
+          activePowerup = { type: 'freeze', timer: POWERUP_DURATION };
+          addFloatingText('FREEZE!', pu.x, pu.y, '#aef');
+        } else {
+          activePowerup = { type: pu.type, timer: POWERUP_DURATION };
+          addFloatingText(pu.label, pu.x, pu.y, pu.color);
+        }
+        powerups.splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  // Wave logic
+  if (waveAnnounceTimer > 0) {
+    waveAnnounceTimer--;
+    if (waveAnnounceTimer <= 0) waveActive = true;
+    return; // pause during announcement
+  }
+
+  if (waveActive) {
+    waveSpawnTimer++;
+    const spawnRate = Math.max(40, 120 - wave * 10);
+
+    if (waveSpawnTimer >= spawnRate) {
+      waveSpawnTimer = 0;
+      if (waveHelisSpawned < waveHeliCount) {
+        spawnHelicopter();
+        waveHelisSpawned++;
+      }
+      // Spawn jets at different intervals
+      if (waveJetsSpawned < waveJetCount && waveHelisSpawned % 3 === 0) {
+        spawnJet();
+        waveJetsSpawned++;
+      }
+    }
+
+    // Check if wave is complete (all spawned and cleared)
+    if (waveHelisSpawned >= waveHeliCount && waveJetsSpawned >= waveJetCount
+        && helicopters.length === 0 && jets.length === 0
+        && paratroopers.every(p => p.landed || p.falling)
+        && bombs.length === 0) {
+      // Start pause before next wave
+      wavePause = 120;
+      waveActive = false;
+    }
+  } else if (wavePause > 0) {
+    wavePause--;
+    if (wavePause <= 0) startWave(wave + 1);
+  }
+
+  // Update bullets
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.x += b.vx;
+    b.y += b.vy;
+    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+      bullets.splice(i, 1);
+    }
+  }
+
+  const frozen = activePowerup && activePowerup.type === 'freeze';
+
+  // Update helicopters
+  for (let i = helicopters.length - 1; i >= 0; i--) {
+    const h = helicopters[i];
+    if (!frozen) {
+      h.x += h.dir * h.speed;
+      h.dropTimer--;
+    }
+
+    if (h.dropTimer <= 0 && !h.dropped) {
+      if (Math.abs(h.x - gun.x) > 80) {
+        spawnParatrooper(h.x, h.y + 15);
+        h.dropped = true;
+      }
+    }
+
+    if ((h.dir > 0 && h.x > canvas.width + 80) || (h.dir < 0 && h.x < -80)) {
+      helicopters.splice(i, 1);
+      continue;
+    }
+
+    for (let j = bullets.length - 1; j >= 0; j--) {
+      const b = bullets[j];
+      if (Math.abs(b.x - h.x) < h.width / 2 && Math.abs(b.y - h.y) < h.height / 2) {
+        const ex = h.x, ey = h.y;
+        addExplosion(ex, ey, 30);
+        helicopters.splice(i, 1);
+        bullets.splice(j, 1);
+        addKill(50, ex, ey);
+        if (b.explosive) explosiveBlast(ex, ey);
+        break;
+      }
+    }
+  }
+
+  // Update jets
+  for (let i = jets.length - 1; i >= 0; i--) {
+    const j = jets[i];
+    if (!frozen) {
+      j.x += j.dir * j.speed;
+    }
+
+    // Drop bomb when over gun area
+    if (!frozen && !j.dropped && Math.abs(j.x - gun.x) < 120) {
+      j.dropped = true;
+      bombs.push({ x: j.x, y: j.y + 10, vy: S('bomb','fallSpeed'), chuteOpen: true });
+    }
+
+    if ((j.dir > 0 && j.x > canvas.width + 100) || (j.dir < 0 && j.x < -100)) {
+      jets.splice(i, 1);
+      continue;
+    }
+
+    for (let k = bullets.length - 1; k >= 0; k--) {
+      const b = bullets[k];
+      if (Math.abs(b.x - j.x) < j.width / 2 && Math.abs(b.y - j.y) < j.height / 2) {
+        const ex = j.x, ey = j.y;
+        addExplosion(ex, ey, 25);
+        jets.splice(i, 1);
+        bullets.splice(k, 1);
+        addKill(100, ex, ey);
+        if (b.explosive) explosiveBlast(ex, ey);
+        break;
+      }
+    }
+  }
+
+  // Update bombs (parachute fall toward turret)
+  for (let i = bombs.length - 1; i >= 0; i--) {
+    const b = bombs[i];
+    if (!frozen) {
+      b.vy = S('bomb','fallSpeed');
+      // Drift toward gun
+      const dx = gun.x - b.x;
+      const remainingY = (gun.y - 10) - b.y;
+      const framesLeft = remainingY / S('bomb','fallSpeed');
+      if (framesLeft > 0) {
+        b.vx = Math.max(-S('bomb','maxDrift'), Math.min(S('bomb','maxDrift'), dx / framesLeft));
+      }
+      b.x += (b.vx || 0);
+      b.y += b.vy;
+    }
+
+    // Hit gun
+    if (b.y >= gun.y - 10 && Math.abs(b.x - gun.x) < 30) {
+      addExplosion(b.x, b.y, 40);
+      bombs.splice(i, 1);
+      gunDestroyed = true;
+      endSequence = true;
+      endSequenceTimer = 0;
+      bullets = [];
+      addExplosion(gun.x, gun.y - 10, 50);
+      addExplosion(gun.x - 12, gun.y, 30);
+      addExplosion(gun.x + 12, gun.y, 30);
+      continue;
+    }
+
+    // Hit ground (miss - shouldn't happen since they aim at gun)
+    if (b.y >= canvas.height - 10) {
+      addExplosion(b.x, canvas.height - 10, 20);
+      bombs.splice(i, 1);
+      continue;
+    }
+
+    // Bullet shoots bomb
+    for (let k = bullets.length - 1; k >= 0; k--) {
+      const bl = bullets[k];
+      if (Math.abs(bl.x - b.x) < 12 && Math.abs(bl.y - b.y) < 12) {
+        const ex = b.x, ey = b.y;
+        addExplosion(ex, ey, 20);
+        bombs.splice(i, 1);
+        bullets.splice(k, 1);
+        addKill(75, ex, ey);
+        if (bl.explosive) explosiveBlast(ex, ey);
+        break;
+      }
+    }
+  }
+
+  // Update paratroopers
+  for (let i = paratroopers.length - 1; i >= 0; i--) {
+    const p = paratroopers[i];
+    if (p.landed) continue;
+    if (frozen && !p.falling) continue; // freeze non-falling paratroopers
+
+    if (!p.falling) {
+      p.chuteTimer--;
+      if (p.chuteTimer <= 0) p.chuteOpen = true;
+    }
+
+    if (p.falling) {
+      // Falling without chute - accelerate down
+      p.vy += S('game','gravity') * 2;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Check collision with other paratroopers (landed or falling with chute)
+      for (let k = paratroopers.length - 1; k >= 0; k--) {
+        if (k === i) continue;
+        const other = paratroopers[k];
+        if (Math.abs(p.x - other.x) < 12 && Math.abs(p.y - other.y) < 18) {
+          // Both die
+          addExplosion(p.x, p.y, 15);
+          addExplosion(other.x, other.y, 12);
+          // Adjust landed counts if the other was landed
+          if (other.landed) {
+            if (other.x < gun.x) landedLeft = Math.max(0, landedLeft - 1);
+            else landedRight = Math.max(0, landedRight - 1);
+          }
+          // Remove both (remove higher index first)
+          const hi = Math.max(i, k), lo = Math.min(i, k);
+          paratroopers.splice(hi, 1);
+          paratroopers.splice(lo, 1);
+          addKill(15, p.x, p.y);
+          i = -1; // break out of outer loop safely
+          break;
+        }
+      }
+      if (i === -1) continue;
+
+      // Hit ground - always dies
+      if (p.y >= canvas.height - 15) {
+        addExplosion(p.x, canvas.height - 15, 10);
+        paratroopers.splice(i, 1);
+        score += 10;
+        continue;
+      }
+    } else if (p.chuteOpen) {
+      p.vy = S('paratrooper','fallSpeed');
+      if (p.landingX == null) {
+        const side = p.x < gun.x ? -1 : 1;
+        const margin = 30;
+        const minX = side < 0 ? margin : gun.x + 40;
+        const maxX = side < 0 ? gun.x - 40 : canvas.width - margin;
+        p.landingX = minX + Math.random() * (maxX - minX);
+      }
+      const remainingY = (canvas.height - 15) - p.y;
+      const framesLeft = remainingY / S('paratrooper','fallSpeed');
+      if (framesLeft > 0) {
+        p.vx = Math.max(-S('paratrooper','maxDrift'), Math.min(S('paratrooper','maxDrift'), (p.landingX - p.x) / framesLeft));
+      }
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.y >= canvas.height - 15) {
+        p.landed = true;
+        p.y = canvas.height - 15;
+        if (p.x < gun.x) landedLeft++;
+        else landedRight++;
+        if (landedLeft >= S('paratrooper','maxLanded') || landedRight >= S('paratrooper','maxLanded')) {
+          startEndSequence();
+        }
+      }
+    } else {
+      // Free falling (before chute opens)
+      p.vy += S('game','gravity');
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.y >= canvas.height - 15) {
+        addExplosion(p.x, canvas.height - 15, 10);
+        paratroopers.splice(i, 1);
+        score += 10;
+        continue;
+      }
+    }
+
+    if (!p.landed && !p.falling) {
+      for (let j = bullets.length - 1; j >= 0; j--) {
+        const b = bullets[j];
+        const hitRadius = p.chuteOpen ? 18 : 8;
+        if (Math.abs(b.x - p.x) < hitRadius && Math.abs(b.y - p.y) < hitRadius) {
+          bullets.splice(j, 1);
+          if (p.chuteOpen) {
+            // Shot the chute - paratrooper falls without parachute
+            p.chuteOpen = false;
+            p.falling = true;
+            p.vy = 0.5;
+            p.vx = 0;
+            p.landingX = null;
+            addKill(25, p.x, p.y - 15);
+          } else {
+            // Direct hit on trooper without chute
+            addExplosion(p.x, p.y, 15);
+            paratroopers.splice(i, 1);
+            addKill(25, p.x, p.y);
+          }
+          break;
+        }
+      }
+    }
+  }
+}
+
+// ---- DRAW ----
+function draw() {
+  const W = canvas.width, H = canvas.height;
+
+  // Sky
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0a2e');
+  grad.addColorStop(0.7, '#1a1a4e');
+  grad.addColorStop(1, '#2a1a3e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  stars.forEach(s => {
+    const twinkle = Math.sin(frame * 0.02 + s.twinkle) * 0.3 + 0.7;
+    ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
+    ctx.fillRect(s.x * W, s.y * H, s.size, s.size);
+  });
+
+  // Ground
+  ctx.fillStyle = '#1a3a1a';
+  ctx.fillRect(0, H - 10, W, 10);
+  ctx.fillStyle = '#2a5a2a';
+  ctx.fillRect(0, H - 10, W, 2);
+
+  if (!started) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('PARATROOPER', W / 2, H / 2 - 80);
+
+    ctx.font = '16px monospace';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('Arrow keys to aim, Space to shoot', W / 2, H / 2 - 20);
+    ctx.fillText('Shoot helicopters, paratroopers, jets & bombs!', W / 2, H / 2 + 10);
+    ctx.fillText("Don't let the gun overheat!", W / 2, H / 2 + 40);
+    ctx.fillText('Press Space to start', W / 2, H / 2 + 80);
+    ctx.fillText('S: Settings', W / 2, H / 2 + 105);
+
+    if (highScore > 0) {
+      ctx.fillStyle = '#fa0';
+      ctx.font = 'bold 18px monospace';
+      ctx.fillText(`HIGH SCORE: ${highScore}`, W / 2, H / 2 - 50);
+    }
+
+    drawGun();
+    return;
+  }
+
+  // Gun
+  if (!gunDestroyed) drawGun();
+
+  // Bullets
+  bullets.forEach(b => {
+    ctx.fillStyle = b.explosive ? '#f84' : '#ff0';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.explosive ? 3 : 2, 0, Math.PI * 2);
+    ctx.fill();
+    if (b.explosive) {
+      ctx.fillStyle = 'rgba(255,100,0,0.3)';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Power-up crates
+  powerups.forEach(pu => {
+    ctx.save();
+    ctx.translate(pu.x, pu.y);
+    // Glow
+    ctx.fillStyle = pu.color + '33';
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // Crate box
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-10, -10, 20, 20);
+    ctx.strokeStyle = pu.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-10, -10, 20, 20);
+    // Symbol
+    ctx.fillStyle = pu.color;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pu.symbol, 0, 1);
+    // Sparkle
+    const sparkle = Math.sin(frame * 0.1) * 0.4 + 0.6;
+    ctx.fillStyle = `rgba(255,255,255,${sparkle})`;
+    ctx.fillRect(-1, -12, 2, 4);
+    ctx.fillRect(-1, 8, 2, 4);
+    ctx.fillRect(-12, -1, 4, 2);
+    ctx.fillRect(8, -1, 4, 2);
+    ctx.restore();
+  });
+
+  // Helicopters
+  helicopters.forEach(h => drawHelicopter(h));
+
+  // Jets
+  jets.forEach(j => drawJet(j));
+
+  // Bombs
+  bombs.forEach(b => drawBomb(b));
+
+  // Paratroopers
+  paratroopers.forEach(p => drawParatrooper(p));
+
+  // Explosions
+  explosions.forEach(e => {
+    const alpha = e.life;
+    const r = e.size * (1 - e.life * 0.5);
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,${Math.floor(150 * alpha)},0,${alpha})`;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, r * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,${Math.floor(100 * alpha)},${alpha})`;
+    ctx.fill();
+  });
+
+  // Floating texts (combo, score popups)
+  floatingTexts.forEach(ft => {
+    ctx.globalAlpha = ft.life;
+    ctx.fillStyle = ft.color;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.globalAlpha = 1;
+  });
+
+  // Landed count
+  drawLandedIndicators();
+
+  // HUD
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`SCORE: ${score}`, 10, 25);
+
+  // High score
+  ctx.fillStyle = '#888';
+  ctx.font = '12px monospace';
+  ctx.fillText(`HI: ${highScore}`, 10, 42);
+
+  // Wave indicator
+  ctx.fillStyle = '#8af';
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`WAVE ${wave}`, W - 10, 25);
+
+  // Combo indicator
+  if (combo > 1) {
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`x${Math.min(combo, 8)} COMBO`, W - 10, 45);
+  }
+
+  // Active power-up indicator
+  if (activePowerup) {
+    const pt = POWERUP_TYPES.find(p => p.type === activePowerup.type);
+    if (pt) {
+      const pct = activePowerup.timer / POWERUP_DURATION;
+      const blink = activePowerup.timer < 90 && Math.floor(frame / 8) % 2;
+      if (!blink) {
+        ctx.fillStyle = pt.color;
+        ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(pt.label, W / 2, 25);
+        // Timer bar
+        const barW = 80;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(W / 2 - barW / 2, 30, barW, 4);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(W / 2 - barW / 2, 30, barW * pct, 4);
+      }
+    }
+  }
+
+  // Heat bar
+  drawHeatBar();
+
+  // Wave announcement
+  if (waveAnnounceTimer > 0) {
+    const alpha = Math.min(1, waveAnnounceTimer / 30);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 32px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`WAVE ${wave}`, W / 2, H / 2 - 20);
+
+    if (wave >= 2 && waveJetCount > 0) {
+      ctx.fillStyle = '#f88';
+      ctx.font = '16px monospace';
+      ctx.fillText('Jets incoming!', W / 2, H / 2 + 15);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Wave complete message
+  if (!waveActive && wavePause > 60) {
+    ctx.fillStyle = '#4f4';
+    ctx.font = 'bold 20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('WAVE COMPLETE!', W / 2, H / 2);
+  }
+
+  // Danger warning
+  if (landedLeft >= S('paratrooper','maxLanded') - 1 || landedRight >= S('paratrooper','maxLanded') - 1) {
+    if (Math.floor(frame / 20) % 2) {
+      ctx.fillStyle = '#f00';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('!! DANGER !!', W / 2, 55);
+    }
+  }
+
+  // Destroyed gun debris
+  if (gunDestroyed) {
+    const gx = gun.x, gy = gun.y;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(gx - 25, gy - 2, 12, 6);
+    ctx.fillRect(gx + 8, gy - 3, 15, 5);
+    ctx.fillRect(gx - 5, gy - 8, 8, 5);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(gx - 18, gy + 2, 10, 4);
+    ctx.fillRect(gx + 14, gy + 1, 8, 4);
+    const smokeAlpha = 0.3 + Math.sin(frame * 0.05) * 0.1;
+    ctx.fillStyle = `rgba(100,100,100,${smokeAlpha})`;
+    ctx.beginPath();
+    ctx.arc(gx + Math.sin(frame * 0.03) * 5, gy - 15 - Math.sin(frame * 0.02) * 8, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(gx - 8 + Math.sin(frame * 0.04) * 3, gy - 22 - Math.sin(frame * 0.03) * 5, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Settings menu overlay
+  if (settingsOpen) {
+    drawSettingsMenu();
+  }
+
+  // Game over
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#f44';
+    ctx.font = 'bold 40px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', W / 2, H / 2 - 50);
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px monospace';
+    ctx.fillText(`Score: ${score}`, W / 2, H / 2);
+    ctx.fillText(`Wave: ${wave}`, W / 2, H / 2 + 30);
+    if (score >= highScore && score > 0) {
+      ctx.fillStyle = '#fa0';
+      ctx.font = 'bold 18px monospace';
+      ctx.fillText('NEW HIGH SCORE!', W / 2, H / 2 + 65);
+    } else {
+      ctx.fillStyle = '#888';
+      ctx.font = '16px monospace';
+      ctx.fillText(`High Score: ${highScore}`, W / 2, H / 2 + 65);
+    }
+    ctx.font = '16px monospace';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('Press Space to restart', W / 2, H / 2 + 100);
+  }
+}
+
+function drawHeatBar() {
+  const barW = 120, barH = 8;
+  const x = (canvas.width - barW) / 2;
+  const y = canvas.height - 8;
+
+  // Background
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x, y, barW, barH);
+
+  // Heat fill
+  const pct = heat / MAX_HEAT;
+  let color;
+  if (overheated) {
+    color = Math.floor(frame / 6) % 2 ? '#f00' : '#f80';
+  } else if (pct > 0.7) {
+    color = '#f80';
+  } else if (pct > 0.4) {
+    color = '#fa0';
+  } else {
+    color = '#4f4';
+  }
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, barW * pct, barH);
+
+  // Border
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, barW, barH);
+
+  // Label
+  if (overheated) {
+    ctx.fillStyle = '#f44';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('OVERHEAT', canvas.width / 2, y - 3);
+  }
+}
+
+function drawGun() {
+  const gx = gun.x, gy = gun.y;
+  ctx.fillStyle = '#556';
+  ctx.fillRect(gx - gun.baseWidth / 2, gy - 5, gun.baseWidth, gun.baseHeight + 5);
+  ctx.beginPath();
+  ctx.arc(gx, gy - 5, 12, Math.PI, 0);
+  ctx.fillStyle = '#778';
+  ctx.fill();
+  ctx.strokeStyle = overheated ? '#f44' : '#99a';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(gx, gy - 8);
+  ctx.lineTo(gx + Math.cos(gunAngle) * GUN_LENGTH, gy - 8 + Math.sin(gunAngle) * GUN_LENGTH);
+  ctx.stroke();
+  ctx.fillStyle = '#aab';
+  ctx.beginPath();
+  ctx.arc(gx + Math.cos(gunAngle) * GUN_LENGTH, gy - 8 + Math.sin(gunAngle) * GUN_LENGTH, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawHelicopter(h) {
+  ctx.save();
+  ctx.translate(h.x, h.y);
+  if (h.dir < 0) ctx.scale(-1, 1);
+
+  ctx.fillStyle = '#888';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 25, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#adf';
+  ctx.beginPath();
+  ctx.ellipse(18, -2, 8, 7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#777';
+  ctx.beginPath();
+  ctx.moveTo(-20, -3); ctx.lineTo(-45, -10); ctx.lineTo(-45, -5); ctx.lineTo(-20, 3);
+  ctx.fill();
+
+  ctx.strokeStyle = '#bbb'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-45, -14); ctx.lineTo(-45, -1); ctx.stroke();
+
+  const rx = Math.cos(frame * 0.3) * 30;
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-rx, -12); ctx.lineTo(rx, -12); ctx.stroke();
+
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, -12); ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawJet(j) {
+  ctx.save();
+  ctx.translate(j.x, j.y);
+  if (j.dir < 0) ctx.scale(-1, 1);
+
+  // Fuselage
+  ctx.fillStyle = '#aa4444';
+  ctx.beginPath();
+  ctx.moveTo(25, 0);
+  ctx.lineTo(-20, -5);
+  ctx.lineTo(-25, 0);
+  ctx.lineTo(-20, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Wings
+  ctx.fillStyle = '#884444';
+  ctx.beginPath();
+  ctx.moveTo(5, -3);
+  ctx.lineTo(-10, -14);
+  ctx.lineTo(-15, -3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(5, 3);
+  ctx.lineTo(-10, 14);
+  ctx.lineTo(-15, 3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail fin
+  ctx.fillStyle = '#993333';
+  ctx.beginPath();
+  ctx.moveTo(-20, -4);
+  ctx.lineTo(-28, -10);
+  ctx.lineTo(-25, -3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cockpit
+  ctx.fillStyle = '#ddf';
+  ctx.beginPath();
+  ctx.ellipse(15, 0, 6, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Engine exhaust
+  ctx.fillStyle = `rgba(255,${100 + Math.random() * 100},0,0.6)`;
+  ctx.beginPath();
+  ctx.moveTo(-25, -2);
+  ctx.lineTo(-32 - Math.random() * 8, 0);
+  ctx.lineTo(-25, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawBomb(b) {
+  ctx.save();
+  ctx.translate(b.x, b.y);
+
+  // Parachute
+  ctx.fillStyle = '#f84';
+  ctx.beginPath();
+  ctx.arc(0, -18, 12, Math.PI, 0);
+  ctx.fill();
+
+  // Chute stripes
+  ctx.fillStyle = '#fc0';
+  ctx.beginPath();
+  ctx.arc(0, -18, 12, Math.PI + 0.4, Math.PI + 1.0);
+  ctx.lineTo(0, -18);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, -18, 12, -0.4, -1.0, true);
+  ctx.lineTo(0, -18);
+  ctx.fill();
+
+  // Strings
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-10, -16); ctx.lineTo(0, -2);
+  ctx.moveTo(10, -16); ctx.lineTo(0, -2);
+  ctx.moveTo(-5, -18); ctx.lineTo(0, -2);
+  ctx.moveTo(5, -18); ctx.lineTo(0, -2);
+  ctx.stroke();
+
+  // Bomb body
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 5, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nose (red tip)
+  ctx.fillStyle = '#f44';
+  ctx.beginPath();
+  ctx.arc(0, 9, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fins
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-6, -4); ctx.lineTo(0, -1);
+  ctx.moveTo(6, -4); ctx.lineTo(0, -1);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawParatrooper(p) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  if (p.walking && p.targetX < p.x) ctx.scale(-1, 1);
+
+  if (p.chuteOpen && !p.landed) {
+    ctx.fillStyle = '#e44';
+    ctx.beginPath(); ctx.arc(0, -22, 16, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(0, -22, 16, Math.PI + 0.5, Math.PI + 1.2); ctx.lineTo(0, -22); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -22, 16, -0.5, -1.2, true); ctx.lineTo(0, -22); ctx.fill();
+    ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-14, -20); ctx.lineTo(0, -2);
+    ctx.moveTo(14, -20); ctx.lineTo(0, -2);
+    ctx.moveTo(-8, -22); ctx.lineTo(0, -2);
+    ctx.moveTo(8, -22); ctx.lineTo(0, -2);
+    ctx.stroke();
+  }
+
+  ctx.beginPath(); ctx.arc(0, -2, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#da8'; ctx.fill();
+
+  ctx.strokeStyle = '#4a4'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(0, 9); ctx.stroke();
+
+  ctx.beginPath();
+  if (p.falling) {
+    // Flailing arms
+    const flail = Math.sin(frame * 0.4) * 6;
+    ctx.moveTo(-6 + flail, -1); ctx.lineTo(0, 4); ctx.lineTo(6 - flail, -1);
+  } else if (p.chuteOpen && !p.landed) {
+    ctx.moveTo(-5, 0); ctx.lineTo(0, 4); ctx.lineTo(5, 0);
+  } else {
+    const armSwing = p.walking ? Math.sin(p.walkFrame || 0) * 4 : 0;
+    ctx.moveTo(-4 - armSwing, 3); ctx.lineTo(0, 4); ctx.lineTo(4 + armSwing, 3);
+  }
+  ctx.stroke();
+
+  ctx.beginPath();
+  if (p.falling) {
+    // Flailing legs
+    const flail = Math.sin(frame * 0.35) * 4;
+    ctx.moveTo(-4 + flail, 15); ctx.lineTo(0, 9); ctx.lineTo(4 - flail, 15);
+  } else if (p.walking) {
+    const legSwing = Math.sin(p.walkFrame || 0) * 5;
+    ctx.moveTo(-3 + legSwing, 15); ctx.lineTo(0, 9); ctx.lineTo(3 - legSwing, 15);
+  } else if (p.landed) {
+    ctx.moveTo(-4, 15); ctx.lineTo(0, 9); ctx.lineTo(4, 15);
+  } else {
+    ctx.moveTo(-3, 15); ctx.lineTo(0, 9); ctx.lineTo(3, 15);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawLandedIndicators() {
+  const W = canvas.width, H = canvas.height;
+  if (landedLeft > 0) {
+    ctx.fillStyle = landedLeft >= S('paratrooper','maxLanded') - 1 ? '#f44' : '#fa0';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`<< ${landedLeft}/${S('paratrooper','maxLanded')}`, 10, H - 15);
+  }
+  if (landedRight > 0) {
+    ctx.fillStyle = landedRight >= S('paratrooper','maxLanded') - 1 ? '#f44' : '#fa0';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${landedRight}/${S('paratrooper','maxLanded')} >>`, W - 10, H - 15);
+  }
+}
+
+function drawSettingsMenu() {
+  const W = canvas.width, H = canvas.height;
+  const menuW = 360, menuH = 400;
+  const mx = (W - menuW) / 2, my = (H - menuH) / 2;
+
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(mx, my, menuW, menuH);
+  ctx.strokeStyle = '#8af';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(mx, my, menuW, menuH);
+
+  // Title
+  ctx.fillStyle = '#8af';
+  ctx.font = 'bold 18px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('SETTINGS', W / 2, my + 25);
+  ctx.fillStyle = '#666';
+  ctx.font = '11px monospace';
+  ctx.fillText('Up/Down: navigate | Left/Right: adjust | S/Esc: close', W / 2, my + 42);
+
+  // List all params with current category highlighted
+  let y = my + 60;
+  let globalIdx = 0;
+  let selectedGlobalIdx = 0;
+
+  // Calculate selected global index
+  for (let ci = 0; ci < settingsCategory; ci++) {
+    selectedGlobalIdx += Object.keys(settings[settingsCategories[ci]]).length + 1;
+  }
+  selectedGlobalIdx += settingsParam + 1; // +1 for category header
+
+  globalIdx = 0;
+  for (let ci = 0; ci < settingsCategories.length; ci++) {
+    const cat = settingsCategories[ci];
+    const params = Object.keys(settings[cat]);
+
+    // Category header
+    const isCurrent = ci === settingsCategory;
+    ctx.fillStyle = isCurrent ? '#8af' : '#556';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(cat.toUpperCase(), mx + 15, y);
+    y += 18;
+    globalIdx++;
+
+    // Params
+    for (let pi = 0; pi < params.length; pi++) {
+      const p = settings[cat][params[pi]];
+      const isSelected = ci === settingsCategory && pi === settingsParam;
+
+      if (y > my + menuH - 20) break;
+
+      // Highlight bar
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(100,150,255,0.15)';
+        ctx.fillRect(mx + 5, y - 11, menuW - 10, 16);
+      }
+
+      // Label
+      ctx.fillStyle = isSelected ? '#fff' : '#999';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(p.label, mx + 25, y);
+
+      // Value
+      ctx.fillStyle = isSelected ? '#ff0' : '#aaa';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'right';
+      const valStr = p.val % 1 === 0 ? String(p.val) : p.val.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+      ctx.fillText(valStr, mx + menuW - 60, y);
+
+      // Slider bar
+      const barX = mx + menuW - 55, barW2 = 40, barY2 = y - 4;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY2, barW2, 6);
+      const pct = (p.val - p.min) / (p.max - p.min);
+      ctx.fillStyle = isSelected ? '#8af' : '#556';
+      ctx.fillRect(barX, barY2, barW2 * pct, 6);
+      // Knob
+      if (isSelected) {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(barX + barW2 * pct - 1, barY2 - 1, 3, 8);
+      }
+
+      y += 16;
+      globalIdx++;
+    }
+    y += 6; // gap between categories
+  }
+}
+
+// Game loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
