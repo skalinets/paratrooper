@@ -1,8 +1,9 @@
-import { S, isMobile, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config.js';
-import { addExplosion, addFloatingText, addKill, explosiveBlast } from './combat.js';
-import { spawnHelicopter, spawnJet, spawnParatrooper } from './entities.js';
+import { S, isMobile, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config';
+import { addExplosion, addFloatingText, addKill, explosiveBlast } from './combat';
+import { spawnHelicopter, spawnJet, spawnParatrooper } from './entities';
+import type { GameState, Gun } from './types';
 
-export function update(state, canvas, gun) {
+export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): void {
   if (!state.started) return;
 
   // Always update explosions & floating texts
@@ -23,7 +24,7 @@ export function update(state, canvas, gun) {
     let allArrived = true;
     state.paratroopers.forEach(p => {
       if (p.walking) {
-        const dx = p.targetX - p.x;
+        const dx = (p.targetX ?? p.x) - p.x;
         if (Math.abs(dx) > 2) {
           p.x += Math.sign(dx) * 1.2;
           p.walkFrame = (p.walkFrame || 0) + 0.15;
@@ -155,7 +156,8 @@ export function update(state, canvas, gun) {
           state.waveHelisSpawned++;
         }
       }
-      if (state.waveJetsSpawned < state.waveJetCount && state.waveHelisSpawned % 3 === 0) {
+      // Spawn jets independently - every 3rd spawn cycle
+      if (state.waveJetsSpawned < state.waveJetCount) {
         spawnJet(state, canvas);
         state.waveJetsSpawned++;
       }
@@ -181,7 +183,7 @@ export function update(state, canvas, gun) {
     }
   }
 
-  const frozen = state.activePowerup && state.activePowerup.type === 'freeze';
+  const frozen: boolean = !!(state.activePowerup && state.activePowerup.type === 'freeze');
 
   // Update helicopters
   for (let i = state.helicopters.length - 1; i >= 0; i--) {
@@ -376,7 +378,7 @@ export function update(state, canvas, gun) {
   }
 }
 
-export function startWave(state) {
+export function startWave(state: GameState): void {
   state.wave++;
   state.waveAnnounceTimer = 120;
   state.wavePause = 0;
@@ -390,7 +392,7 @@ export function startWave(state) {
   state.waveSpawnTimer = 0;
 }
 
-export function startEndSequence(state, gun) {
+export function startEndSequence(state: GameState, gun: Gun): void {
   state.endSequence = true;
   state.endSequenceTimer = 0;
   state.bullets = [];

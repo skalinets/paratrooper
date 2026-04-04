@@ -1,14 +1,14 @@
-import { isMobile } from './config.js';
-import { state } from './state.js';
-import { setupInput, handleInput } from './input.js';
-import { update } from './update.js';
-import { draw } from './render.js';
+import { isMobile } from './config';
+import type { Gun, Star } from './types';
+import { state } from './state';
+import { setupInput, handleInput } from './input';
+import { update } from './update';
+import { draw } from './render';
 
-// Canvas setup
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('game') as HTMLCanvasElement;
+const ctx = canvas.getContext('2d')!;
 
-function resize() {
+function resize(): void {
   if (isMobile) {
     const controlH = 120;
     canvas.width = window.innerWidth;
@@ -21,27 +21,23 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// Gun object with dynamic position
-const gun = {
+const gun: Gun = {
   get x() { return canvas.width / 2; },
   get y() { return canvas.height - (isMobile ? 25 : 20); },
   baseWidth: 40,
   baseHeight: 15,
 };
 
-// Stars (static, generated once)
-const stars = Array.from({ length: 80 }, () => ({
+const stars: Star[] = Array.from({ length: 80 }, (): Star => ({
   x: Math.random(),
   y: Math.random() * 0.6,
   size: Math.random() * 2 + 0.5,
   twinkle: Math.random() * Math.PI * 2,
 }));
 
-// Initialize input
 setupInput(state, canvas);
 
-// Game loop
-function loop() {
+function loop(): void {
   handleInput(state, gun);
   update(state, canvas, gun);
   draw(ctx, canvas, state, gun, stars);

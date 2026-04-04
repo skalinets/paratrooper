@@ -1,13 +1,15 @@
-import { S, settings, settingsCategories } from './config.js';
-import { shoot } from './combat.js';
-import { startWave } from './update.js';
-import { resetState } from './state.js';
+import { S, settings, settingsCategories } from './config';
+import type { GameState, Gun, SettingsCategory } from './types';
+import { shoot } from './combat';
+import { startWave } from './update';
+import { resetState } from './state';
 
-export const keysDown = {};
+export const keysDown: Record<string, boolean> = {};
 export const touchState = { left: false, right: false, fire: false };
+type TouchKey = keyof typeof touchState;
 
-export function setupInput(state, canvas) {
-  document.addEventListener('keydown', e => {
+export function setupInput(state: GameState, canvas: HTMLCanvasElement): void {
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
     keysDown[e.code] = true;
 
     if (e.code === 'KeyS') {
@@ -17,13 +19,14 @@ export function setupInput(state, canvas) {
     }
     if (state.settingsOpen) {
       e.preventDefault();
-      const cat = settingsCategories[state.settingsCategory];
+      const cat = settingsCategories[state.settingsCategory] as SettingsCategory;
       const params = Object.keys(settings[cat]);
       if (e.code === 'ArrowUp') {
         state.settingsParam--;
         if (state.settingsParam < 0) {
           state.settingsCategory = (state.settingsCategory - 1 + settingsCategories.length) % settingsCategories.length;
-          state.settingsParam = Object.keys(settings[settingsCategories[state.settingsCategory]]).length - 1;
+          const prevCat = settingsCategories[state.settingsCategory] as SettingsCategory;
+          state.settingsParam = Object.keys(settings[prevCat]).length - 1;
         }
       } else if (e.code === 'ArrowDown') {
         state.settingsParam++;
@@ -32,10 +35,10 @@ export function setupInput(state, canvas) {
           state.settingsParam = 0;
         }
       } else if (e.code === 'ArrowLeft' || e.code === 'Comma') {
-        const p = settings[cat][params[state.settingsParam]];
+        const p = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number }>)[params[state.settingsParam]!]!;
         p.val = Math.max(p.min, +(p.val - p.step).toFixed(6));
       } else if (e.code === 'ArrowRight' || e.code === 'Period') {
-        const p = settings[cat][params[state.settingsParam]];
+        const p = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number }>)[params[state.settingsParam]!]!;
         p.val = Math.min(p.max, +(p.val + p.step).toFixed(6));
       } else if (e.code === 'Escape') {
         state.settingsOpen = false;
@@ -55,39 +58,36 @@ export function setupInput(state, canvas) {
     }
   });
 
-  document.addEventListener('keyup', e => { keysDown[e.code] = false; });
+  document.addEventListener('keyup', (e: KeyboardEvent) => { keysDown[e.code] = false; });
 
-  // Touch controls
-  function bindTouchBtn(id, key) {
+  function bindTouchBtn(id: string, key: TouchKey): void {
     const el = document.getElementById(id);
     if (!el) return;
-    const start = () => { touchState[key] = true; el.classList.add('pressed'); };
-    const end = () => { touchState[key] = false; el.classList.remove('pressed'); };
-    el.addEventListener('touchstart', e => { e.preventDefault(); start(); });
-    el.addEventListener('touchend', e => { e.preventDefault(); end(); });
-    el.addEventListener('touchcancel', e => { e.preventDefault(); end(); });
+    const start = (): void => { touchState[key] = true; el.classList.add('pressed'); };
+    const end = (): void => { touchState[key] = false; el.classList.remove('pressed'); };
+    el.addEventListener('touchstart', (e: Event) => { e.preventDefault(); start(); });
+    el.addEventListener('touchend', (e: Event) => { e.preventDefault(); end(); });
+    el.addEventListener('touchcancel', (e: Event) => { e.preventDefault(); end(); });
   }
   bindTouchBtn('btn-left', 'left');
   bindTouchBtn('btn-right', 'right');
   bindTouchBtn('btn-fire', 'fire');
 
-  canvas.addEventListener('touchstart', e => {
+  canvas.addEventListener('touchstart', (e: Event) => {
     e.preventDefault();
     if (state.gameOver && state.canRestart) { resetState(state); state.started = true; startWave(state); }
     else if (!state.started) { state.started = true; startWave(state); }
   });
 }
 
-export function handleInput(state, gun) {
+export function handleInput(state: GameState, gun: Gun): void {
   if (state.gameOver || state.endSequence || !state.started) return;
 
-  // Gun rotation
   if (!state.settingsOpen) {
     if (keysDown['ArrowLeft'] || touchState.left) state.gunAngle -= S('turret', 'rotationSpeed');
     if (keysDown['ArrowRight'] || touchState.right) state.gunAngle += S('turret', 'rotationSpeed');
   }
 
-  // Auto-fire
   if ((keysDown['Space'] || touchState.fire) && !state.endSequence && !state.settingsOpen) {
     state.fireTimer++;
     if (state.fireTimer >= S('turret', 'fireRate')) {

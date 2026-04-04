@@ -1,4 +1,4 @@
-.PHONY: build deploy commit push all dev clean test lint check serve stop
+.PHONY: build deploy commit push all dev clean test lint typecheck check serve stop
 
 PROJECT = paratrooper
 BRANCH = main
@@ -6,7 +6,7 @@ BUN = PATH="$$HOME/.bun/bin:$$PATH" bun
 
 # Build minified bundle
 build:
-	$(BUN) build src/main.js --outdir dist --minify
+	$(BUN) build src/main.ts --outdir dist --minify
 	cp src/index.html dist/index.html
 
 # Deploy dist/ to Cloudflare Pages
@@ -21,12 +21,16 @@ test:
 lint:
 	npx oxlint src/
 
-# Lint + test
-check: lint test
+# Type-check
+typecheck:
+	$(BUN) tsc --noEmit
+
+# Lint + typecheck + test
+check: lint typecheck test
 
 # Dev mode - build and open
 dev:
-	$(BUN) build src/main.js --outdir dist
+	$(BUN) build src/main.ts --outdir dist
 	cp src/index.html dist/index.html
 	open dist/index.html
 

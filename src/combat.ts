@@ -1,14 +1,15 @@
-import { S, GUN_LENGTH, MAX_HEAT } from './config.js';
+import { S, GUN_LENGTH, MAX_HEAT } from './config';
+import type { GameState, Gun } from './types';
 
-export function addExplosion(state, x, y, size) {
+export function addExplosion(state: GameState, x: number, y: number, size: number): void {
   state.explosions.push({ x, y, size, life: 1 });
 }
 
-export function addFloatingText(state, text, x, y, color) {
+export function addFloatingText(state: GameState, text: string, x: number, y: number, color: string): void {
   state.floatingTexts.push({ text, x, y, life: 1, color });
 }
 
-export function addKill(state, points, x, y) {
+export function addKill(state: GameState, points: number, x: number, y: number): void {
   state.comboTimer = S('game', 'comboWindow');
   state.combo++;
   const multiplier = Math.min(state.combo, 8);
@@ -21,7 +22,7 @@ export function addKill(state, points, x, y) {
   }
 }
 
-export function explosiveBlast(state, x, y) {
+export function explosiveBlast(state: GameState, x: number, y: number): void {
   const radius = 60;
   addExplosion(state, x, y, 40);
   for (let i = state.helicopters.length - 1; i >= 0; i--) {
@@ -57,13 +58,13 @@ export function explosiveBlast(state, x, y) {
   }
 }
 
-export function shoot(state, gun) {
+export function shoot(state: GameState, gun: Gun): void {
   if (state.overheated) return;
   const spd = S('turret', 'bulletSpeed');
   const spread = S('turret', 'bulletSpread') * Math.PI / 180;
   const bx = gun.x + Math.cos(state.gunAngle) * GUN_LENGTH;
   const by = gun.y + Math.sin(state.gunAngle) * GUN_LENGTH;
-  const isExplosive = state.activePowerup && state.activePowerup.type === 'explosive';
+  const isExplosive = !!(state.activePowerup && state.activePowerup.type === 'explosive');
 
   if (state.activePowerup && state.activePowerup.type === 'triple') {
     for (let s = -1; s <= 1; s++) {

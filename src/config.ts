@@ -1,8 +1,10 @@
-export const isMobile = typeof navigator !== 'undefined'
+import type { Settings, SettingsCategory, PowerUpDef } from './types';
+
+export const isMobile: boolean = typeof navigator !== 'undefined'
   && (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
     || (typeof window !== 'undefined' && window.matchMedia('(hover: none) and (pointer: coarse)').matches));
 
-export const settings = {
+export const settings: Settings = {
   turret: {
     rotationSpeed: { val: 0.03, min: 0.01, max: 0.1, step: 0.005, label: 'Rotation Speed' },
     bulletSpeed: { val: 8, min: 2, max: 20, step: 0.5, label: 'Bullet Speed' },
@@ -46,17 +48,19 @@ if (isMobile) {
   settings.paratrooper.fallSpeed.val = 0.8;
 }
 
-export function S(category, key) { return settings[category][key].val; }
+export function S<C extends SettingsCategory>(category: C, key: keyof Settings[C]): number {
+  return (settings[category][key] as { val: number }).val;
+}
 
-export const settingsCategories = Object.keys(settings);
+export const settingsCategories: SettingsCategory[] = Object.keys(settings) as SettingsCategory[];
 
-export const GUN_LENGTH = 30;
-export const MAX_HEAT = 100;
-export const POWERUP_DURATION = 480;
-export const POWERUP_TYPES = [
+export const GUN_LENGTH: number = 30;
+export const MAX_HEAT: number = 100;
+export const POWERUP_DURATION: number = 480;
+export const POWERUP_TYPES: readonly PowerUpDef[] = [
   { type: 'triple', label: 'TRIPLE SHOT', color: '#4af', symbol: '3' },
   { type: 'explosive', label: 'EXPLOSIVE', color: '#f84', symbol: 'E' },
   { type: 'rapid', label: 'RAPID FIRE', color: '#4f4', symbol: 'R' },
   { type: 'freeze', label: 'FREEZE', color: '#aef', symbol: 'F' },
   { type: 'nuke', label: 'NUKE!', color: '#f4f', symbol: 'N' },
-];
+] as const;

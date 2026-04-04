@@ -1,6 +1,7 @@
-import { S, isMobile } from './config.js';
+import { S, isMobile } from './config';
+import type { GameState } from './types';
 
-export function spawnHelicopter(state, canvas, forceDir) {
+export function spawnHelicopter(state: GameState, canvas: HTMLCanvasElement, forceDir?: number): void {
   const fromLeft = forceDir != null ? (forceDir > 0) : (Math.random() < 0.5);
   const speed = S('helicopter', 'speed') + state.wave * S('helicopter', 'waveSpeedBonus');
   const yRange = isMobile ? 180 : 120;
@@ -20,7 +21,7 @@ export function spawnHelicopter(state, canvas, forceDir) {
   });
 }
 
-export function spawnJet(state, canvas) {
+export function spawnJet(state: GameState, canvas: HTMLCanvasElement): void {
   const fromLeft = Math.random() < 0.5;
   const speed = S('jet', 'speed') + state.wave * S('jet', 'waveSpeedBonus');
   state.jets.push({
@@ -34,7 +35,7 @@ export function spawnJet(state, canvas) {
   });
 }
 
-export function spawnParatrooper(state, x, y) {
+export function spawnParatrooper(state: GameState, x: number, y: number): void {
   const baseDelay = 20 + Math.random() * 20;
   const waveBonus = Math.min(state.wave * 5, 40);
   state.paratroopers.push({

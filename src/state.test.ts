@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createState, resetState } from './state.js';
+import { createState, resetState } from './state';
 
 describe('createState', () => {
   test('returns fresh state with default values', () => {
@@ -19,7 +19,7 @@ describe('createState', () => {
     const a = createState();
     const b = createState();
     a.score = 100;
-    a.bullets.push({ x: 0, y: 0 });
+    a.bullets.push({ x: 0, y: 0, vx: 0, vy: 0, explosive: false });
     expect(b.score).toBe(0);
     expect(b.bullets.length).toBe(0);
   });
@@ -31,7 +31,7 @@ describe('resetState', () => {
     s.score = 500;
     s.highScore = 1000;
     s.wave = 5;
-    s.bullets.push({ x: 1, y: 2 });
+    s.bullets.push({ x: 1, y: 2, vx: 0, vy: 0, explosive: false });
     s.gameOver = true;
     resetState(s);
     expect(s.score).toBe(0);

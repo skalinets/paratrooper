@@ -1,6 +1,7 @@
-import { S, isMobile, settings, settingsCategories, GUN_LENGTH, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config.js';
+import { S, isMobile, settings, settingsCategories, GUN_LENGTH, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config';
+import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper } from './types';
 
-function drawHeatBar(ctx, canvas, state) {
+function drawHeatBar(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
   const barW = 160;
   const barH = 14;
   const x = canvas.width / 2 - barW / 2;
@@ -37,7 +38,7 @@ function drawHeatBar(ctx, canvas, state) {
   ctx.fillText(state.overheated ? 'OVERHEAT' : 'HEAT', canvas.width / 2, y - 2);
 }
 
-function drawGun(ctx, state, gun) {
+function drawGun(ctx: CanvasRenderingContext2D, state: GameState, gun: Gun): void {
   const gx = gun.x;
   const gy = gun.y;
 
@@ -70,7 +71,7 @@ function drawGun(ctx, state, gun) {
   ctx.restore();
 }
 
-function drawHelicopter(ctx, h, frame) {
+function drawHelicopter(ctx: CanvasRenderingContext2D, h: Helicopter, frame: number): void {
   ctx.save();
   ctx.translate(h.x, h.y);
   ctx.scale(h.dir, 1);
@@ -124,7 +125,7 @@ function drawHelicopter(ctx, h, frame) {
   ctx.restore();
 }
 
-function drawJet(ctx, j) {
+function drawJet(ctx: CanvasRenderingContext2D, j: Jet): void {
   ctx.save();
   ctx.translate(j.x, j.y);
   ctx.scale(j.dir, 1);
@@ -178,7 +179,7 @@ function drawJet(ctx, j) {
   ctx.restore();
 }
 
-function drawBomb(ctx, b) {
+function drawBomb(ctx: CanvasRenderingContext2D, b: Bomb): void {
   ctx.save();
   ctx.translate(b.x, b.y);
 
@@ -241,7 +242,7 @@ function drawBomb(ctx, b) {
   ctx.restore();
 }
 
-function drawParatrooper(ctx, p, frame) {
+function drawParatrooper(ctx: CanvasRenderingContext2D, p: Paratrooper, frame: number): void {
   ctx.save();
   ctx.translate(p.x, p.y);
 
@@ -355,8 +356,8 @@ function drawParatrooper(ctx, p, frame) {
   ctx.restore();
 }
 
-function drawLandedIndicators(ctx, canvas, state) {
-  const maxLanded = S('paratrooper', 'maxLanded');
+function drawLandedIndicators(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
+  const maxLanded: number = S('paratrooper', 'maxLanded');
   const dangerColor = '#f44';
   const normalColor = '#f84';
 
@@ -374,7 +375,7 @@ function drawLandedIndicators(ctx, canvas, state) {
   ctx.fillText(`${state.landedRight}/${maxLanded}`, canvas.width - 10, canvas.height - 40);
 }
 
-function drawSettingsMenu(ctx, canvas, state) {
+function drawSettingsMenu(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
   const menuW = 360;
   const menuH = 400;
   const mx = canvas.width / 2 - menuW / 2;
@@ -416,7 +417,7 @@ function drawSettingsMenu(ctx, canvas, state) {
     const params = Object.keys(settings[cat]);
     params.forEach((param, paramIdx) => {
       const isSelected = isActiveCategory && state.settingsParam === paramIdx;
-      const cfg = settings[cat][param];
+      const cfg = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number; label: string }>)[param]!;
       const val = cfg.val;
       const ratio = (val - cfg.min) / (cfg.max - cfg.min);
 
@@ -459,7 +460,7 @@ function drawSettingsMenu(ctx, canvas, state) {
   });
 }
 
-function draw(ctx, canvas, state, gun, stars) {
+function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState, gun: Gun, stars: Star[]): void {
   const W = canvas.width;
   const H = canvas.height;
 
@@ -473,7 +474,7 @@ function draw(ctx, canvas, state, gun, stars) {
   // Stars
   ctx.fillStyle = '#fff';
   for (const star of stars) {
-    const alpha = 0.4 + Math.sin(state.frame * 0.02 + star.phase) * 0.3;
+    const alpha = 0.4 + Math.sin(state.frame * 0.02 + star.twinkle) * 0.3;
     ctx.globalAlpha = alpha;
     ctx.fillRect(star.x, star.y, star.size, star.size);
   }
@@ -638,7 +639,7 @@ function draw(ctx, canvas, state, gun, stars) {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(state.score, W / 2, 28);
+  ctx.fillText(String(state.score), W / 2, 28);
 
   // High score
   ctx.fillStyle = '#888';
@@ -661,9 +662,10 @@ function draw(ctx, canvas, state, gun, stars) {
 
   // Active power-up indicator
   if (state.activePowerup) {
-    const pt = POWERUP_TYPES.find(t => t.type === state.activePowerup.type);
+    const activePowerup = state.activePowerup;
+    const pt = POWERUP_TYPES.find(t => t.type === activePowerup.type);
     if (pt) {
-      const timeLeft = state.activePowerup.timer / POWERUP_DURATION;
+      const timeLeft = activePowerup.timer / POWERUP_DURATION;
       const expiring = timeLeft < 0.25;
       const visible = !expiring || state.frame % 20 < 14;
 
@@ -723,7 +725,7 @@ function draw(ctx, canvas, state, gun, stars) {
   }
 
   // Danger warning (flashing when both sides near max)
-  const maxLanded = S('paratrooper', 'maxLanded');
+  const maxLanded: number = S('paratrooper', 'maxLanded');
   if ((state.landedLeft >= maxLanded - 1 || state.landedRight >= maxLanded - 1) && state.frame % 40 < 20) {
     ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
     ctx.fillRect(0, 0, W, H);

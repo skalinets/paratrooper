@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { createState } from './state.js';
-import { addExplosion, addFloatingText, addKill } from './combat.js';
+import { createState } from './state';
+import { addExplosion, addFloatingText, addKill } from './combat';
 
 describe('addExplosion', () => {
   test('adds explosion to state', () => {
