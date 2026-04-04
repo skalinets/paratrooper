@@ -1,4 +1,4 @@
-.PHONY: build deploy commit push all dev clean test lint typecheck check serve stop
+.PHONY: build deploy commit push all dev clean test lint typecheck check serve stop sandbox sandbox-deps sandbox-train sandbox-tune
 
 PROJECT = paratrooper
 BRANCH = main
@@ -54,6 +54,22 @@ serve: build
 # Stop local server
 stop:
 	docker compose down
+
+# Start sandbox WebSocket server (default port 8080)
+sandbox:
+	$(BUN) run sandbox/server.ts $(or $(PORT),8080)
+
+# Install Python dependencies for sandbox
+sandbox-deps:
+	pip install -r sandbox/python/requirements.txt
+
+# Run PPO training demo (start sandbox server first with `make sandbox`)
+sandbox-train:
+	python sandbox/python/train_ppo.py --no-auto-server --port $(or $(PORT),8080)
+
+# Run parameter sweep demo (start sandbox server first with `make sandbox`)
+sandbox-tune:
+	python sandbox/python/tune_params.py --no-auto-server --port $(or $(PORT),8080)
 
 # Clean build artifacts
 clean:

@@ -143,6 +143,11 @@ export interface ActivePowerUp {
   timer: number;
 }
 
+export interface CanvasSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface Gun {
   readonly x: number;
   readonly y: number;
