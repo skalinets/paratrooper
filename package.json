@@ -1,0 +1,16 @@
+{
+  "name": "paratrooper",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/main.js --outdir dist --minify && cp src/index.html dist/index.html",
+    "dev": "bun build src/main.js --outdir dist && cp src/index.html dist/index.html && open dist/index.html",
+    "test": "bun test",
+    "lint": "oxlint src/",
+    "lint:fix": "oxlint src/ --fix",
+    "check": "oxlint src/ && bun test"
+  },
+  "devDependencies": {
+    "oxlint": "^1.58.0"
+  }
+}

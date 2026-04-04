@@ -2,23 +2,70 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Paratrooper</title>
 <style>
+  @media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+    body::after {
+      content: 'Please rotate to portrait mode';
+      position: fixed; inset: 0; z-index: 9999;
+      background: #000; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font: bold 20px monospace; text-align: center;
+    }
+    canvas, #touch-controls { display: none !important; }
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  html, body { background: #000; width: 100%; height: 100%; overflow: hidden; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  body { display: flex; flex-direction: column; justify-content: center; align-items: center; }
   canvas { display: block; }
+  #touch-controls {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    height: 120px; z-index: 10;
+    pointer-events: none;
+  }
+  .touch-btn {
+    position: absolute; pointer-events: auto;
+    border: 2px solid rgba(255,255,255,0.3); border-radius: 16px;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
+    font: bold 22px monospace; display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-btn:active, .touch-btn.pressed {
+    background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); color: rgba(255,255,255,0.8);
+  }
+  #btn-left { left: 15px; bottom: 20px; width: 80px; height: 80px; }
+  #btn-right { left: 110px; bottom: 20px; width: 80px; height: 80px; }
+  #btn-fire { right: 15px; bottom: 10px; width: 100px; height: 100px; border-radius: 50%; font-size: 16px; }
+  @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    #touch-controls { display: block; }
+  }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="touch-controls">
+  <div id="btn-left" class="touch-btn">&larr;</div>
+  <div id="btn-right" class="touch-btn">&rarr;</div>
+  <div id="btn-fire" class="touch-btn">FIRE</div>
+</div>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+const touchControlsEl = document.getElementById('touch-controls');
+
 function resize() {
-  canvas.width = Math.min(window.innerWidth, 960);
-  canvas.height = Math.min(window.innerHeight, 640);
+  if (isMobile) {
+    // Portrait: use full screen, leave room for touch controls
+    const controlH = 120;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - controlH;
+  } else {
+    canvas.width = Math.min(window.innerWidth, 960);
+    canvas.height = Math.min(window.innerHeight, 640);
+  }
 }
 resize();
 window.addEventListener('resize', resize);
@@ -28,7 +75,7 @@ const settings = {
   turret: {
     rotationSpeed: { val: 0.03, min: 0.01, max: 0.1, step: 0.005, label: 'Rotation Speed' },
     bulletSpeed: { val: 8, min: 2, max: 20, step: 0.5, label: 'Bullet Speed' },
-    bulletSpread: { val: 0.06, min: 0, max: 0.2, step: 0.01, label: 'Bullet Spread' },
+    bulletSpread: { val: 5, min: 0, max: 15, step: 0.5, label: 'Bullet Spread (deg)' },
     fireRate: { val: 8, min: 2, max: 30, step: 1, label: 'Fire Rate (frames)' },
     heatPerShot: { val: 8, min: 1, max: 25, step: 1, label: 'Heat Per Shot' },
     heatDecay: { val: 0.4, min: 0.1, max: 2, step: 0.1, label: 'Heat Decay' },
@@ -57,6 +104,16 @@ const settings = {
     powerupInterval: { val: 600, min: 200, max: 1500, step: 50, label: 'Powerup Interval' },
   },
 };
+
+// Apply mobile difficulty adjustments
+if (isMobile) {
+  settings.turret.bulletSpeed.val = 5.5;
+  settings.turret.bulletSpread.val = 9;
+  settings.turret.fireRate.val = 10;
+  settings.turret.heatPerShot.val = 10;
+  settings.turret.heatDecay.val = 0.3;
+  settings.paratrooper.fallSpeed.val = 0.8;
+}
 
 // Shorthand getters
 function S(category, key) { return settings[category][key].val; }
@@ -129,7 +186,7 @@ let powerupSpawnTimer = 0;
 // Gun
 const gun = {
   get x() { return canvas.width / 2; },
-  get y() { return canvas.height - 20; },
+  get y() { return canvas.height - (isMobile ? 25 : 20); },
   baseWidth: 40,
   baseHeight: 15,
 };
@@ -194,12 +251,34 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { keysDown[e.code] = false; });
 
+// Touch controls
+const touchState = { left: false, right: false, fire: false };
+
+function bindTouchBtn(id, key) {
+  const el = document.getElementById(id);
+  const start = () => { touchState[key] = true; el.classList.add('pressed'); };
+  const end = () => { touchState[key] = false; el.classList.remove('pressed'); };
+  el.addEventListener('touchstart', e => { e.preventDefault(); start(); });
+  el.addEventListener('touchend', e => { e.preventDefault(); end(); });
+  el.addEventListener('touchcancel', e => { e.preventDefault(); end(); });
+}
+bindTouchBtn('btn-left', 'left');
+bindTouchBtn('btn-right', 'right');
+bindTouchBtn('btn-fire', 'fire');
+
+// Tap canvas to start/restart on mobile
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (gameOver && canRestart) restart();
+  else if (!started) { started = true; startWave(1); }
+});
+
 let fireTimer = 0;
 
 function shoot() {
   if (overheated) return;
   const spd = S('turret','bulletSpeed');
-  const spread = S('turret','bulletSpread');
+  const spread = S('turret','bulletSpread') * Math.PI / 180; // degrees to radians
   const bx = gun.x + Math.cos(gunAngle) * GUN_LENGTH;
   const by = gun.y + Math.sin(gunAngle) * GUN_LENGTH;
   const isExplosive = activePowerup && activePowerup.type === 'explosive';
@@ -283,29 +362,35 @@ function explosiveBlast(x, y) {
 // Wave system
 function startWave(n) {
   wave = n;
-  waveAnnounceTimer = 120; // show wave announcement for 2 seconds
+  waveAnnounceTimer = 120;
   wavePause = 0;
   waveActive = false;
-  // Scaling: more helis and jets each wave
-  waveHeliCount = 3 + Math.floor(wave * 1.5);
-  waveJetCount = wave >= 2 ? Math.floor(wave / 2) : 0;
+  const mobileScale = isMobile ? 1.4 : 1.0;
+  waveHeliCount = Math.floor((3 + Math.floor(wave * 1.5)) * mobileScale);
+  waveJetCount = wave >= 2 ? Math.floor(Math.floor(wave / 2) * mobileScale) : 0;
+  if (isMobile && wave >= 1) waveJetCount = Math.max(1, waveJetCount);
   waveHelisSpawned = 0;
   waveJetsSpawned = 0;
   waveSpawnTimer = 0;
 }
 
-function spawnHelicopter() {
-  const fromLeft = Math.random() < 0.5;
+function spawnHelicopter(forceDir) {
+  const fromLeft = forceDir != null ? (forceDir > 0) : (Math.random() < 0.5);
   const speed = S('helicopter','speed') + wave * S('helicopter','waveSpeedBonus');
+  const yRange = isMobile ? 180 : 120;
+  const baseY = isMobile ? 40 : 50;
   helicopters.push({
     x: fromLeft ? -60 : canvas.width + 60,
-    y: 30 + Math.random() * 70,
+    y: baseY + Math.random() * yRange,
     dir: fromLeft ? 1 : -1,
     speed,
     dropTimer: 40 + Math.random() * 60,
     dropped: false,
     width: 55,
     height: 20,
+    bobAmp: isMobile ? (8 + Math.random() * 12) : 0,
+    bobFreq: 0.02 + Math.random() * 0.02,
+    bobPhase: Math.random() * Math.PI * 2,
   });
 }
 
@@ -324,10 +409,13 @@ function spawnJet() {
 }
 
 function spawnParatrooper(x, y) {
+  // Chute opens later in higher waves — more freefall time, harder to hit
+  const baseDelay = 20 + Math.random() * 20;
+  const waveBonus = Math.min(wave * 5, 40); // +5 frames per wave, cap at +40
   paratroopers.push({
     x, y, vy: 0.5, vx: 0,
     chuteOpen: false,
-    chuteTimer: 20 + Math.random() * 20,
+    chuteTimer: baseDelay + waveBonus,
     landed: false, alive: true,
   });
 }
@@ -434,14 +522,14 @@ function update() {
 
   // Gun angle
   if (!settingsOpen) {
-    if (keysDown['ArrowLeft']) gunAngle -= S('turret','rotationSpeed');
-    if (keysDown['ArrowRight']) gunAngle += S('turret','rotationSpeed');
+    if (keysDown['ArrowLeft'] || touchState.left) gunAngle -= S('turret','rotationSpeed');
+    if (keysDown['ArrowRight'] || touchState.right) gunAngle += S('turret','rotationSpeed');
   }
   if (gunAngle > 0) gunAngle = 0;
   if (gunAngle < -Math.PI) gunAngle = -Math.PI;
 
   // Auto-fire while holding Space
-  if (keysDown['Space'] && !endSequence && !settingsOpen) {
+  if ((keysDown['Space'] || touchState.fire) && !endSequence && !settingsOpen) {
     fireTimer++;
     if (fireTimer >= S('turret','fireRate')) {
       fireTimer = 0;
@@ -502,7 +590,8 @@ function update() {
     // Bullet collision - shoot to collect
     for (let j = bullets.length - 1; j >= 0; j--) {
       const b = bullets[j];
-      if (Math.abs(b.x - pu.x) < 14 && Math.abs(b.y - pu.y) < 14) {
+      const puHit = isMobile ? 10 : 14;
+      if (Math.abs(b.x - pu.x) < puHit && Math.abs(b.y - pu.y) < puHit) {
         bullets.splice(j, 1);
         // Activate power-up
         if (pu.type === 'nuke') {
@@ -542,15 +631,22 @@ function update() {
 
   if (waveActive) {
     waveSpawnTimer++;
-    const spawnRate = Math.max(40, 120 - wave * 10);
+    const spawnRate = isMobile
+      ? Math.max(30, 90 - wave * 10)
+      : Math.max(40, 120 - wave * 10);
 
     if (waveSpawnTimer >= spawnRate) {
       waveSpawnTimer = 0;
       if (waveHelisSpawned < waveHeliCount) {
         spawnHelicopter();
         waveHelisSpawned++;
+        // Mobile: 50% chance to spawn a second from opposite side
+        if (isMobile && waveHelisSpawned < waveHeliCount && Math.random() < 0.5) {
+          const lastDir = helicopters[helicopters.length - 1].dir;
+          spawnHelicopter(-lastDir);
+          waveHelisSpawned++;
+        }
       }
-      // Spawn jets at different intervals
       if (waveJetsSpawned < waveJetCount && waveHelisSpawned % 3 === 0) {
         spawnJet();
         waveJetsSpawned++;
@@ -589,6 +685,9 @@ function update() {
     if (!frozen) {
       h.x += h.dir * h.speed;
       h.dropTimer--;
+      if (h.bobAmp) {
+        h.y += Math.cos(frame * h.bobFreq + h.bobPhase) * h.bobAmp * 0.05;
+      }
     }
 
     if (h.dropTimer <= 0 && !h.dropped) {
@@ -689,7 +788,8 @@ function update() {
     // Bullet shoots bomb
     for (let k = bullets.length - 1; k >= 0; k--) {
       const bl = bullets[k];
-      if (Math.abs(bl.x - b.x) < 12 && Math.abs(bl.y - b.y) < 12) {
+      const bombHit = isMobile ? 8 : 12;
+      if (Math.abs(bl.x - b.x) < bombHit && Math.abs(bl.y - b.y) < bombHit) {
         const ex = b.x, ey = b.y;
         addExplosion(ex, ey, 20);
         bombs.splice(i, 1);
@@ -792,7 +892,7 @@ function update() {
     if (!p.landed && !p.falling) {
       for (let j = bullets.length - 1; j >= 0; j--) {
         const b = bullets[j];
-        const hitRadius = p.chuteOpen ? 18 : 8;
+        const hitRadius = p.chuteOpen ? (isMobile ? 12 : 18) : (isMobile ? 5 : 8);
         if (Math.abs(b.x - p.x) < hitRadius && Math.abs(b.y - p.y) < hitRadius) {
           bullets.splice(j, 1);
           if (p.chuteOpen) {
@@ -849,11 +949,18 @@ function draw() {
 
     ctx.font = '16px monospace';
     ctx.fillStyle = '#aaa';
-    ctx.fillText('Arrow keys to aim, Space to shoot', W / 2, H / 2 - 20);
-    ctx.fillText('Shoot helicopters, paratroopers, jets & bombs!', W / 2, H / 2 + 10);
-    ctx.fillText("Don't let the gun overheat!", W / 2, H / 2 + 40);
-    ctx.fillText('Press Space to start', W / 2, H / 2 + 80);
-    ctx.fillText('S: Settings', W / 2, H / 2 + 105);
+    if (isMobile) {
+      ctx.fillText('Use buttons to aim and fire', W / 2, H / 2 - 20);
+      ctx.fillText('Shoot helicopters, paratroopers, jets & bombs!', W / 2, H / 2 + 10);
+      ctx.fillText("Don't let the gun overheat!", W / 2, H / 2 + 40);
+      ctx.fillText('Tap to start', W / 2, H / 2 + 80);
+    } else {
+      ctx.fillText('Arrow keys to aim, Space to shoot', W / 2, H / 2 - 20);
+      ctx.fillText('Shoot helicopters, paratroopers, jets & bombs!', W / 2, H / 2 + 10);
+      ctx.fillText("Don't let the gun overheat!", W / 2, H / 2 + 40);
+      ctx.fillText('Press Space to start', W / 2, H / 2 + 80);
+      ctx.fillText('S: Settings', W / 2, H / 2 + 105);
+    }
 
     if (highScore > 0) {
       ctx.fillStyle = '#fa0';
@@ -1084,7 +1191,7 @@ function draw() {
     }
     ctx.font = '16px monospace';
     ctx.fillStyle = '#aaa';
-    ctx.fillText('Press Space to restart', W / 2, H / 2 + 100);
+    ctx.fillText(isMobile ? 'Tap to restart' : 'Press Space to restart', W / 2, H / 2 + 100);
   }
 }
 
