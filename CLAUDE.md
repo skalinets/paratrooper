@@ -43,6 +43,20 @@ src/
 - **`createState()` factory** - Creates fresh state for testing
 - **Tests for every module** - Cover edge cases (empty arrays, NaN inputs, boundary conditions)
 
+## Subagents
+Configured in `.claude/settings.json`:
+- **game-designer** - Game balance analysis, mechanics proposals, references GAME.md
+- **qa-tester** - Interactive browser QA: opens game, monitors console while developer plays
+- **ts-migrator** - TypeScript strict mode enforcement, type safety
+
+## Workflow
+1. Work in git worktrees for feature branches
+2. Run `make check` (lint + typecheck + test) before committing
+3. Commit and push before running local game
+4. Update GAME.md when adding/changing mechanics
+5. Reference GAME.md spec when implementing features
+6. Use subagents: game-designer for balance, qa-tester for bugs, ts-migrator for types
+
 ## Game Spec
 See `GAME.md` for complete game mechanics documentation. Always keep it current.
 
