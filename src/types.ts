@@ -37,7 +37,12 @@ export interface Settings {
     gravity: SettingParam;
     comboWindow: SettingParam;
     powerupInterval: SettingParam;
+    godMode: SettingParam;
   };
+}
+
+export interface ConfigValues {
+  [category: string]: { [key: string]: number };
 }
 
 export type SettingsCategory = keyof Settings;

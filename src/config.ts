@@ -1,52 +1,47 @@
-import type { Settings, SettingsCategory, PowerUpDef } from './types';
+import type { Settings, SettingsCategory, PowerUpDef, ConfigValues } from './types';
+import { desktopDefaults } from './defaults.desktop';
+import { mobileDefaults } from './defaults.mobile';
 
 export const isMobile: boolean = typeof navigator !== 'undefined'
   && (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
     || (typeof window !== 'undefined' && window.matchMedia('(hover: none) and (pointer: coarse)').matches));
 
+const defaults: ConfigValues = isMobile ? mobileDefaults : desktopDefaults;
+
 export const settings: Settings = {
   turret: {
-    rotationSpeed: { val: 0.03, min: 0.01, max: 0.1, step: 0.005, label: 'Rotation Speed' },
-    bulletSpeed: { val: 8, min: 2, max: 20, step: 0.5, label: 'Bullet Speed' },
-    bulletSpread: { val: 5, min: 0, max: 15, step: 0.5, label: 'Bullet Spread (deg)' },
-    fireRate: { val: 8, min: 2, max: 30, step: 1, label: 'Fire Rate (frames)' },
-    heatPerShot: { val: 8, min: 1, max: 25, step: 1, label: 'Heat Per Shot' },
-    heatDecay: { val: 0.4, min: 0.1, max: 2, step: 0.1, label: 'Heat Decay' },
-    overheatCooldown: { val: 120, min: 30, max: 300, step: 10, label: 'Overheat Cooldown' },
+    rotationSpeed: { val: defaults.turret!.rotationSpeed!, min: 0.01, max: 0.1, step: 0.005, label: 'Rotation Speed' },
+    bulletSpeed: { val: defaults.turret!.bulletSpeed!, min: 2, max: 20, step: 0.5, label: 'Bullet Speed' },
+    bulletSpread: { val: defaults.turret!.bulletSpread!, min: 0, max: 15, step: 0.5, label: 'Bullet Spread (deg)' },
+    fireRate: { val: defaults.turret!.fireRate!, min: 2, max: 30, step: 1, label: 'Fire Rate (frames)' },
+    heatPerShot: { val: defaults.turret!.heatPerShot!, min: 1, max: 25, step: 1, label: 'Heat Per Shot' },
+    heatDecay: { val: defaults.turret!.heatDecay!, min: 0.1, max: 2, step: 0.1, label: 'Heat Decay' },
+    overheatCooldown: { val: defaults.turret!.overheatCooldown!, min: 30, max: 300, step: 10, label: 'Overheat Cooldown' },
   },
   helicopter: {
-    speed: { val: 1.5, min: 0.3, max: 5, step: 0.1, label: 'Speed' },
-    waveSpeedBonus: { val: 0.1, min: 0, max: 0.5, step: 0.05, label: 'Speed +/Wave' },
+    speed: { val: defaults.helicopter!.speed!, min: 0.3, max: 5, step: 0.1, label: 'Speed' },
+    waveSpeedBonus: { val: defaults.helicopter!.waveSpeedBonus!, min: 0, max: 0.5, step: 0.05, label: 'Speed +/Wave' },
   },
   paratrooper: {
-    fallSpeed: { val: 0.5, min: 0.1, max: 2, step: 0.05, label: 'Fall Speed' },
-    maxDrift: { val: 1.5, min: 0.3, max: 4, step: 0.1, label: 'Max Drift' },
-    maxLanded: { val: 4, min: 1, max: 10, step: 1, label: 'Max Landed (per side)' },
+    fallSpeed: { val: defaults.paratrooper!.fallSpeed!, min: 0.1, max: 2, step: 0.05, label: 'Fall Speed' },
+    maxDrift: { val: defaults.paratrooper!.maxDrift!, min: 0.3, max: 4, step: 0.1, label: 'Max Drift' },
+    maxLanded: { val: defaults.paratrooper!.maxLanded!, min: 1, max: 10, step: 1, label: 'Max Landed (per side)' },
   },
   jet: {
-    speed: { val: 4, min: 1, max: 10, step: 0.5, label: 'Speed' },
-    waveSpeedBonus: { val: 0.3, min: 0, max: 1, step: 0.1, label: 'Speed +/Wave' },
+    speed: { val: defaults.jet!.speed!, min: 1, max: 10, step: 0.5, label: 'Speed' },
+    waveSpeedBonus: { val: defaults.jet!.waveSpeedBonus!, min: 0, max: 1, step: 0.1, label: 'Speed +/Wave' },
   },
   bomb: {
-    fallSpeed: { val: 0.8, min: 0.2, max: 3, step: 0.1, label: 'Fall Speed' },
-    maxDrift: { val: 1, min: 0.2, max: 3, step: 0.1, label: 'Max Drift' },
+    fallSpeed: { val: defaults.bomb!.fallSpeed!, min: 0.2, max: 3, step: 0.1, label: 'Fall Speed' },
+    maxDrift: { val: defaults.bomb!.maxDrift!, min: 0.2, max: 3, step: 0.1, label: 'Max Drift' },
   },
   game: {
-    gravity: { val: 0.04, min: 0.01, max: 0.15, step: 0.005, label: 'Gravity' },
-    comboWindow: { val: 45, min: 10, max: 120, step: 5, label: 'Combo Window (frames)' },
-    powerupInterval: { val: 600, min: 200, max: 1500, step: 50, label: 'Powerup Interval' },
+    gravity: { val: defaults.game!.gravity!, min: 0.01, max: 0.15, step: 0.005, label: 'Gravity' },
+    comboWindow: { val: defaults.game!.comboWindow!, min: 10, max: 120, step: 5, label: 'Combo Window (frames)' },
+    powerupInterval: { val: defaults.game!.powerupInterval!, min: 200, max: 1500, step: 50, label: 'Powerup Interval' },
+    godMode: { val: defaults.game!.godMode!, min: 0, max: 1, step: 1, label: 'God Mode' },
   },
 };
-
-// Apply mobile difficulty adjustments
-if (isMobile) {
-  settings.turret.bulletSpeed.val = 5.5;
-  settings.turret.bulletSpread.val = 9;
-  settings.turret.fireRate.val = 10;
-  settings.turret.heatPerShot.val = 10;
-  settings.turret.heatDecay.val = 0.3;
-  settings.paratrooper.fallSpeed.val = 0.8;
-}
 
 export function S<C extends SettingsCategory>(category: C, key: keyof Settings[C]): number {
   return (settings[category][key] as { val: number }).val;
@@ -64,3 +59,17 @@ export const POWERUP_TYPES: readonly PowerUpDef[] = [
   { type: 'freeze', label: 'FREEZE', color: '#aef', symbol: 'F' },
   { type: 'nuke', label: 'NUKE!', color: '#f4f', symbol: 'N' },
 ] as const;
+
+/** Dump current config values to console as pasteable JSON */
+export function dumpConfig(): void {
+  const dump: ConfigValues = {};
+  for (const cat of settingsCategories) {
+    dump[cat] = {};
+    const params = settings[cat] as Record<string, { val: number }>;
+    for (const [key, param] of Object.entries(params)) {
+      dump[cat]![key] = param.val;
+    }
+  }
+  console.log(`// Current config (${isMobile ? 'mobile' : 'desktop'})`);
+  console.log(JSON.stringify(dump, null, 2));
+}

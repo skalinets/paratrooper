@@ -260,6 +260,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     if (b.y >= gun.y - 10 && Math.abs(b.x - gun.x) < 30) {
       addExplosion(state, b.x, b.y, 40);
       state.bombs.splice(i, 1);
+      if (S('game', 'godMode') >= 1) continue;
       state.gunDestroyed = true;
       state.endSequence = true;
       state.endSequenceTimer = 0;
@@ -342,7 +343,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         p.landed = true; p.y = canvas.height - 15;
         if (p.x < gun.x) state.landedLeft++;
         else state.landedRight++;
-        if (state.landedLeft >= S('paratrooper','maxLanded') || state.landedRight >= S('paratrooper','maxLanded')) {
+        if (S('game', 'godMode') < 1 && (state.landedLeft >= S('paratrooper','maxLanded') || state.landedRight >= S('paratrooper','maxLanded'))) {
           startEndSequence(state, gun);
         }
       }

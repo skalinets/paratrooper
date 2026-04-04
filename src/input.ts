@@ -1,4 +1,4 @@
-import { S, settings, settingsCategories } from './config';
+import { S, settings, settingsCategories, dumpConfig } from './config';
 import type { GameState, Gun, SettingsCategory } from './types';
 import { shoot } from './combat';
 import { startWave } from './update';
@@ -15,6 +15,10 @@ export function setupInput(state: GameState, canvas: HTMLCanvasElement): void {
     if (e.code === 'KeyS') {
       state.settingsOpen = !state.settingsOpen;
       state.settingsParam = 0;
+      return;
+    }
+    if (e.code === 'KeyD') {
+      dumpConfig();
       return;
     }
     if (state.settingsOpen) {
