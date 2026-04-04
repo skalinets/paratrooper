@@ -1,9 +1,9 @@
 import { S, isMobile, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config';
 import { addExplosion, addFloatingText, addKill, explosiveBlast } from './combat';
 import { spawnHelicopter, spawnJet, spawnParatrooper } from './entities';
-import type { GameState, Gun } from './types';
+import type { GameState, Gun, CanvasSize } from './types';
 
-export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): void {
+export function update(state: GameState, canvas: CanvasSize, gun: Gun): void {
   if (!state.started) return;
 
   // Always update explosions & floating texts
@@ -51,7 +51,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       state.canRestart = true;
       if (state.score > state.highScore) {
         state.highScore = state.score;
-        localStorage.setItem('paratrooper_hi', String(state.highScore));
+        if (typeof localStorage !== 'undefined') localStorage.setItem('paratrooper_hi', String(state.highScore));
       }
     }
     return;
