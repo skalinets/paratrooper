@@ -3,13 +3,13 @@
 
 Usage:
     # Start the sandbox server first:
-    bun run sandbox/server.ts 8080
+    bun run sandbox/server.ts 9346
 
     # Then run training:
     python sandbox/python/train_ppo.py
 
     # With custom settings:
-    python sandbox/python/train_ppo.py --timesteps 100000 --port 8080
+    python sandbox/python/train_ppo.py --timesteps 100000 --port 9346
 """
 
 from __future__ import annotations
@@ -91,7 +91,7 @@ def evaluate_random(env: ParatrooperEnv, n_episodes: int = 20) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train PPO agent for Paratrooper")
     parser.add_argument("--timesteps", type=int, default=50000, help="Training timesteps")
-    parser.add_argument("--port", type=int, default=8080, help="Server port")
+    parser.add_argument("--port", type=int, default=9346, help="Server port")
     parser.add_argument("--eval-episodes", type=int, default=20, help="Evaluation episodes")
     parser.add_argument("--save-path", type=str, default="paratrooper_ppo", help="Model save path")
     parser.add_argument("--no-auto-server", action="store_true", help="Don't auto-start server")

@@ -6,13 +6,13 @@ average game length and score for different parameter configurations.
 
 Usage:
     # Start the sandbox server first:
-    bun run sandbox/server.ts 8080
+    bun run sandbox/server.ts 9346
 
     # Then run sweep:
     python sandbox/python/tune_params.py
 
     # With custom settings:
-    python sandbox/python/tune_params.py --episodes 50 --port 8080
+    python sandbox/python/tune_params.py --episodes 50 --port 9346
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ def evaluate_config(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Parameter sweep for Paratrooper balance")
     parser.add_argument("--episodes", type=int, default=10, help="Episodes per config")
-    parser.add_argument("--port", type=int, default=8080, help="Server port")
+    parser.add_argument("--port", type=int, default=9346, help="Server port")
     parser.add_argument("--no-auto-server", action="store_true", help="Don't auto-start server")
     args = parser.parse_args()
 

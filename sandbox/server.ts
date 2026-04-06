@@ -34,7 +34,7 @@ function getOrCreateEnv(ws: object, envId: string, config?: Partial<SimulationCo
   return sim;
 }
 
-const port = parseInt(process.argv[2] ?? '8080', 10);
+const port = parseInt(process.argv[2] ?? '9346', 10);
 
 const server = Bun.serve({
   port,

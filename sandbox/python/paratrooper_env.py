@@ -41,7 +41,7 @@ class ParatrooperEnv(gym.Env):
         frame_skip: int = 4,
         max_steps: int = 10000,
         auto_server: bool = True,
-        server_port: int = 8080,
+        server_port: int = 9346,
     ):
         super().__init__()
 

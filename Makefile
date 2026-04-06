@@ -57,7 +57,7 @@ stop:
 
 # Start sandbox WebSocket server (default port 8080)
 sandbox:
-	$(BUN) run sandbox/server.ts $(or $(PORT),8080)
+	$(BUN) run sandbox/server.ts $(or $(PORT),9346)
 
 # Install Python dependencies for sandbox
 sandbox-deps:
@@ -65,11 +65,11 @@ sandbox-deps:
 
 # Run PPO training demo (start sandbox server first with `make sandbox`)
 sandbox-train:
-	python sandbox/python/train_ppo.py --no-auto-server --port $(or $(PORT),8080)
+	python sandbox/python/train_ppo.py --no-auto-server --port $(or $(PORT),9346)
 
 # Run parameter sweep demo (start sandbox server first with `make sandbox`)
 sandbox-tune:
-	python sandbox/python/tune_params.py --no-auto-server --port $(or $(PORT),8080)
+	python sandbox/python/tune_params.py --no-auto-server --port $(or $(PORT),9346)
 
 # Clean build artifacts
 clean:
