@@ -492,27 +492,77 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
   const W = canvas.width;
   const H = canvas.height;
 
-  // Sky gradient
+  // Sky gradient - day or night
   const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
-  skyGrad.addColorStop(0, '#0a0a1a');
-  skyGrad.addColorStop(1, '#1a1a3a');
+  if (state.nightMode) {
+    skyGrad.addColorStop(0, '#050510');
+    skyGrad.addColorStop(1, '#0a0a20');
+  } else {
+    skyGrad.addColorStop(0, '#1a3a6a');
+    skyGrad.addColorStop(0.5, '#4a7aaa');
+    skyGrad.addColorStop(1, '#7aaacc');
+  }
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, W, H);
 
-  // Stars
-  ctx.fillStyle = '#fff';
-  for (const star of stars) {
-    const alpha = 0.4 + Math.sin(state.frame * 0.02 + star.twinkle) * 0.3;
-    ctx.globalAlpha = alpha;
-    ctx.fillRect(star.x, star.y, star.size, star.size);
+  // Stars (night only) or clouds (day)
+  if (state.nightMode) {
+    ctx.fillStyle = '#fff';
+    for (const star of stars) {
+      const alpha = 0.5 + Math.sin(state.frame * 0.02 + star.twinkle) * 0.3;
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(star.x * W, star.y * H * 0.6, star.size, star.size);
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    // Subtle clouds
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    for (let i = 0; i < 5; i++) {
+      const cx = ((state.frame * 0.1 + i * 200) % (W + 100)) - 50;
+      const cy = 30 + i * 25 + Math.sin(i * 2.5) * 15;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 40 + i * 8, 12 + i * 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
-  ctx.globalAlpha = 1;
+
+  // City skyline (behind ground)
+  const groundY = H - 30;
+  ctx.fillStyle = state.nightMode ? '#0a0a15' : '#445566';
+  // Buildings - deterministic from canvas width
+  const buildingSeed = [0.1, 0.25, 0.35, 0.45, 0.55, 0.62, 0.72, 0.8, 0.9];
+  const buildingH = [60, 90, 45, 110, 70, 55, 85, 65, 50];
+  const buildingW = [30, 22, 35, 18, 28, 40, 20, 32, 25];
+  for (let i = 0; i < buildingSeed.length; i++) {
+    const bx = buildingSeed[i]! * W;
+    const bh = buildingH[i]!;
+    const bw = buildingW[i]!;
+    ctx.fillRect(bx - bw / 2, groundY - bh, bw, bh);
+    // Windows
+    if (state.nightMode) {
+      for (let wy = groundY - bh + 8; wy < groundY - 5; wy += 12) {
+        for (let wx = bx - bw / 2 + 4; wx < bx + bw / 2 - 4; wx += 8) {
+          ctx.fillStyle = Math.random() > 0.4 ? 'rgba(255,220,100,0.6)' : 'rgba(100,150,200,0.15)';
+          ctx.fillRect(wx, wy, 4, 5);
+        }
+      }
+      ctx.fillStyle = '#0a0a15';
+    } else {
+      ctx.fillStyle = state.nightMode ? '#0a0a15' : '#3a4a5a';
+      for (let wy = groundY - bh + 8; wy < groundY - 5; wy += 12) {
+        for (let wx = bx - bw / 2 + 4; wx < bx + bw / 2 - 4; wx += 8) {
+          ctx.fillRect(wx, wy, 4, 5);
+        }
+      }
+      ctx.fillStyle = '#445566';
+    }
+  }
 
   // Ground
-  ctx.fillStyle = '#3a5a2a';
-  ctx.fillRect(0, H - 30, W, 30);
-  ctx.fillStyle = '#2a4a1a';
-  ctx.fillRect(0, H - 30, W, 4);
+  ctx.fillStyle = state.nightMode ? '#0a1a0a' : '#3a5a2a';
+  ctx.fillRect(0, groundY, W, 30);
+  ctx.fillStyle = state.nightMode ? '#081508' : '#2a4a1a';
+  ctx.fillRect(0, groundY, W, 4);
 
   // Title screen
   if (!state.started) {
