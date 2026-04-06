@@ -33,18 +33,21 @@ function logError(err: unknown): void {
   };
   errorLog.push(entry);
   if (errorLog.length > MAX_ERRORS) errorLog.shift();
+  showErrorOverlay = true;
   console.error('[GAME ERROR]', entry.msg, '\n', entry.stack, '\nEntities:', entry.entities);
   try {
     localStorage.setItem('paratrooper_errors', JSON.stringify(errorLog));
   } catch { /* localStorage may be full */ }
 }
 
+let showErrorOverlay = true;
+
 function drawErrorOverlay(): void {
-  if (errorLog.length === 0) return;
+  if (errorLog.length === 0 || !showErrorOverlay) return;
   const last = errorLog[errorLog.length - 1]!;
   ctx.save();
   ctx.fillStyle = 'rgba(100,0,0,0.85)';
-  ctx.fillRect(0, 0, canvas.width, 60);
+  ctx.fillRect(0, 0, canvas.width, 70);
   ctx.fillStyle = '#f44';
   ctx.font = 'bold 12px monospace';
   ctx.textAlign = 'left';
@@ -55,8 +58,32 @@ function drawErrorOverlay(): void {
   ctx.fillText(stackLine, 8, 30);
   ctx.fillText(`Entities: ${last.entities}`, 8, 42);
   ctx.fillStyle = '#888';
-  ctx.fillText(`${errorLog.length} error(s) | localStorage: paratrooper_errors`, 8, 54);
+  ctx.fillText(`${errorLog.length} error(s) | Tap to dismiss | localStorage: paratrooper_errors`, 8, 54);
+  // Copy button
+  ctx.fillStyle = '#48f';
+  ctx.fillRect(canvas.width - 60, 4, 52, 18);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('COPY', canvas.width - 34, 16);
   ctx.restore();
+}
+
+function handleErrorClick(ex: number, ey: number): boolean {
+  if (errorLog.length === 0 || !showErrorOverlay) return false;
+  if (ey > 70) return false;
+  // Copy button area
+  if (ex >= canvas.width - 60 && ey <= 22) {
+    const text = JSON.stringify(errorLog, null, 2);
+    navigator.clipboard.writeText(text).then(
+      () => { console.log('[GAME] Errors copied to clipboard'); },
+      () => { console.log('[GAME] Copy failed. Errors:', text); }
+    );
+    return true;
+  }
+  // Tap anywhere else on overlay to dismiss
+  showErrorOverlay = false;
+  return true;
 }
 
 // FPS tracking
@@ -115,6 +142,18 @@ const stars: Star[] = Array.from({ length: 80 }, (): Star => ({
 }));
 
 setupInput(state, canvas);
+
+// Error overlay click/tap handling
+canvas.addEventListener('click', (e: MouseEvent) => {
+  const rect = canvas.getBoundingClientRect();
+  handleErrorClick(e.clientX - rect.left, e.clientY - rect.top);
+});
+canvas.addEventListener('touchend', (e: TouchEvent) => {
+  const touch = e.changedTouches[0];
+  if (!touch) return;
+  const rect = canvas.getBoundingClientRect();
+  handleErrorClick(touch.clientX - rect.left, touch.clientY - rect.top);
+});
 
 // Expose state for console debugging
 (window as unknown as Record<string, unknown>).__gameState = state;
