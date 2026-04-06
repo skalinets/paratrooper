@@ -94,9 +94,9 @@ const server = Bun.serve({
           }
 
           case 'configure': {
-            const sim = envs.get(env_id);
+            const sim = getOrCreateEnv(ws, env_id);
             if (!sim) {
-              ws.send(JSON.stringify({ env_id, error: 'Environment not found. Call reset first.' }));
+              ws.send(JSON.stringify({ env_id, error: `Environment limit reached (max ${MAX_ENVS} total, ${MAX_ENVS_PER_WS} per connection)` }));
               return;
             }
             if (msg.params) sim.configure(msg.params);

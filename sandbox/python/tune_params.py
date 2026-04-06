@@ -90,7 +90,8 @@ def evaluate_config(
     waves = []
 
     for _ in range(n_episodes):
-        env.configure(params)
+        if params:
+            env.configure(params)
         obs, _ = env.reset()
         done = False
         ep_steps = 0
