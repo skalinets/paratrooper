@@ -1,5 +1,5 @@
 import { S, isMobile, settings, settingsCategories, GUN_LENGTH, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config';
-import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper } from './types';
+import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper, SettingsCategory } from './types';
 
 function drawHeatBar(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
   const barW = 160;
@@ -376,16 +376,15 @@ function drawLandedIndicators(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasE
 }
 
 function drawSettingsMenu(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
-  const menuW = 360;
-  const menuH = 400;
+  const menuW = 340;
+  const menuH = state.settingsDrillDown ? 380 : 260;
   const mx = canvas.width / 2 - menuW / 2;
   const my = canvas.height / 2 - menuH / 2;
+  const lineH = 26;
 
   // Dark background
   ctx.fillStyle = 'rgba(0, 0, 20, 0.92)';
   ctx.fillRect(mx, my, menuW, menuH);
-
-  // Blue border
   ctx.strokeStyle = '#48f';
   ctx.lineWidth = 2;
   ctx.strokeRect(mx, my, menuW, menuH);
@@ -396,33 +395,53 @@ function drawSettingsMenu(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEleme
   ctx.textAlign = 'center';
   ctx.fillText('SETTINGS', canvas.width / 2, my + 26);
 
-  // Navigation help
-  ctx.fillStyle = '#888';
-  ctx.font = '10px monospace';
-  ctx.fillText('↑↓ navigate  ←→ adjust  ESC close', canvas.width / 2, my + 42);
+  if (!state.settingsDrillDown) {
+    // Top-level: show categories
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.fillText('\u2191\u2193 navigate  \u2192/Enter drill down  S close', canvas.width / 2, my + 42);
 
-  const lineH = 22;
-  let lineY = my + 62;
+    let lineY = my + 68;
+    settingsCategories.forEach((cat, catIdx) => {
+      const isSelected = state.settingsCategory === catIdx;
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(60, 80, 160, 0.5)';
+        ctx.fillRect(mx + 8, lineY - 14, menuW - 16, lineH - 2);
+      }
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isSelected ? '#fff' : '#888';
+      ctx.fillText(cat.toUpperCase(), mx + 20, lineY);
+      // Arrow indicator
+      if (isSelected) {
+        ctx.fillStyle = '#48f';
+        ctx.textAlign = 'right';
+        ctx.fillText('\u25B6', mx + menuW - 16, lineY);
+      }
+      lineY += lineH;
+    });
+  } else {
+    // Drilled into a category: show params
+    const cat = settingsCategories[state.settingsCategory] as SettingsCategory;
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.fillText('\u2191\u2193 navigate  \u2190\u2192 adjust  ESC back', canvas.width / 2, my + 42);
 
-  settingsCategories.forEach((cat, catIdx) => {
-    const isActiveCategory = state.settingsCategory === catIdx;
-
-    // Category header
-    ctx.font = 'bold 12px monospace';
+    // Category breadcrumb
+    ctx.fillStyle = '#48f';
+    ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'left';
-    ctx.fillStyle = isActiveCategory ? '#48f' : '#666';
-    ctx.fillText(`[${cat.toUpperCase()}]`, mx + 12, lineY);
-    lineY += lineH - 4;
+    ctx.fillText('\u25C0 ' + cat.toUpperCase(), mx + 12, my + 60);
 
+    let lineY = my + 82;
     const params = Object.keys(settings[cat]);
     params.forEach((param, paramIdx) => {
-      const isSelected = isActiveCategory && state.settingsParam === paramIdx;
+      const isSelected = state.settingsParam === paramIdx;
       const cfg = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number; label: string }>)[param]!;
       const val = cfg.val;
       const ratio = (val - cfg.min) / (cfg.max - cfg.min);
 
       if (isSelected) {
-        // Highlight bar
         ctx.fillStyle = 'rgba(60, 80, 160, 0.5)';
         ctx.fillRect(mx + 8, lineY - 14, menuW - 16, lineH - 2);
       }
@@ -433,31 +452,30 @@ function drawSettingsMenu(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEleme
       ctx.textAlign = 'left';
       ctx.fillText(cfg.label, mx + 18, lineY);
 
-      // Value (yellow when selected)
+      // Value
       ctx.fillStyle = isSelected ? '#ff4' : '#ccc';
       ctx.textAlign = 'right';
       const displayVal = Number.isInteger(cfg.step) ? val : val.toFixed(2);
       ctx.fillText(String(displayVal), mx + menuW - 80, lineY);
 
-      // Blue slider with white knob
+      // Slider
       const sliderX = mx + menuW - 75;
       const sliderW = 60;
       const sliderY = lineY - 5;
       ctx.fillStyle = '#224';
       ctx.fillRect(sliderX, sliderY, sliderW, 6);
-      ctx.fillStyle = '#48f';
+      ctx.fillStyle = isSelected ? '#48f' : '#336';
       ctx.fillRect(sliderX, sliderY, sliderW * ratio, 6);
-      // White knob
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(sliderX + sliderW * ratio, sliderY + 3, 4, 0, Math.PI * 2);
-      ctx.fill();
+      if (isSelected) {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(sliderX + sliderW * ratio, sliderY + 3, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       lineY += lineH;
     });
-
-    lineY += 4;
-  });
+  }
 }
 
 function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState, gun: Gun, stars: Star[]): void {

@@ -205,4 +205,5 @@ export interface GameState {
   settingsOpen: boolean;
   settingsCategory: number;
   settingsParam: number;
+  settingsDrillDown: boolean;
 }

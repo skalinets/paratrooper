@@ -25,27 +25,36 @@ export function setupInput(state: GameState, canvas: HTMLCanvasElement): void {
       e.preventDefault();
       const cat = settingsCategories[state.settingsCategory] as SettingsCategory;
       const params = Object.keys(settings[cat]);
-      if (e.code === 'ArrowUp') {
-        state.settingsParam--;
-        if (state.settingsParam < 0) {
+
+      if (!state.settingsDrillDown) {
+        // Category level navigation
+        if (e.code === 'ArrowUp') {
           state.settingsCategory = (state.settingsCategory - 1 + settingsCategories.length) % settingsCategories.length;
-          const prevCat = settingsCategories[state.settingsCategory] as SettingsCategory;
-          state.settingsParam = Object.keys(settings[prevCat]).length - 1;
-        }
-      } else if (e.code === 'ArrowDown') {
-        state.settingsParam++;
-        if (state.settingsParam >= params.length) {
+        } else if (e.code === 'ArrowDown') {
           state.settingsCategory = (state.settingsCategory + 1) % settingsCategories.length;
+        } else if (e.code === 'ArrowRight' || e.code === 'Enter') {
+          state.settingsDrillDown = true;
           state.settingsParam = 0;
+        } else if (e.code === 'Escape') {
+          state.settingsOpen = false;
         }
-      } else if (e.code === 'ArrowLeft' || e.code === 'Comma') {
-        const p = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number }>)[params[state.settingsParam]!]!;
-        p.val = Math.max(p.min, +(p.val - p.step).toFixed(6));
-      } else if (e.code === 'ArrowRight' || e.code === 'Period') {
-        const p = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number }>)[params[state.settingsParam]!]!;
-        p.val = Math.min(p.max, +(p.val + p.step).toFixed(6));
-      } else if (e.code === 'Escape') {
-        state.settingsOpen = false;
+      } else {
+        // Parameter level navigation
+        if (e.code === 'ArrowUp') {
+          state.settingsParam--;
+          if (state.settingsParam < 0) state.settingsParam = params.length - 1;
+        } else if (e.code === 'ArrowDown') {
+          state.settingsParam++;
+          if (state.settingsParam >= params.length) state.settingsParam = 0;
+        } else if (e.code === 'ArrowLeft' || e.code === 'Comma') {
+          const p = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number }>)[params[state.settingsParam]!]!;
+          p.val = Math.max(p.min, +(p.val - p.step).toFixed(6));
+        } else if (e.code === 'ArrowRight' || e.code === 'Period') {
+          const p = (settings[cat] as Record<string, { val: number; min: number; max: number; step: number }>)[params[state.settingsParam]!]!;
+          p.val = Math.min(p.max, +(p.val + p.step).toFixed(6));
+        } else if (e.code === 'Escape') {
+          state.settingsDrillDown = false;
+        }
       }
       return;
     }

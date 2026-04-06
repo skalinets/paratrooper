@@ -49,6 +49,7 @@ export function createState(): GameState {
     settingsOpen: false,
     settingsCategory: 0,
     settingsParam: 0,
+    settingsDrillDown: false,
   };
 }
 
