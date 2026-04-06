@@ -39,6 +39,11 @@ export interface Settings {
     powerupInterval: SettingParam;
     godMode: SettingParam;
   };
+  powerups: {
+    duration: SettingParam;
+    missileRate: SettingParam;
+    missileSpeed: SettingParam;
+  };
 }
 
 export interface ConfigValues {

@@ -1,4 +1,4 @@
-import { S, isMobile, settings, settingsCategories, GUN_LENGTH, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config';
+import { S, isMobile, settings, settingsCategories, GUN_LENGTH, MAX_HEAT, POWERUP_TYPES } from './config';
 import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper, SettingsCategory } from './types';
 
 function drawHeatBar(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
@@ -642,50 +642,31 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.fill();
   }
 
-  // Laser aim line (when laser powerup active)
+  // Laser sight - shows turret aim direction
   if (state.activePowerup && state.activePowerup.type === 'laser') {
-    let nearX = 0, nearY = 0, nearDist = Infinity;
-    for (const h of state.helicopters) {
-      const d = Math.hypot(h.x - gun.x, h.y - gun.y);
-      if (d < nearDist) { nearDist = d; nearX = h.x; nearY = h.y; }
-    }
-    for (const j of state.jets) {
-      const d = Math.hypot(j.x - gun.x, j.y - gun.y);
-      if (d < nearDist) { nearDist = d; nearX = j.x; nearY = j.y; }
-    }
-    for (const p of state.paratroopers) {
-      if (p.landed) continue;
-      const d = Math.hypot(p.x - gun.x, p.y - gun.y);
-      if (d < nearDist) { nearDist = d; nearX = p.x; nearY = p.y; }
-    }
-    for (const bm of state.bombs) {
-      const d = Math.hypot(bm.x - gun.x, bm.y - gun.y);
-      if (d < nearDist) { nearDist = d; nearX = bm.x; nearY = bm.y; }
-    }
-    if (nearDist < Infinity) {
-      // Pulsing red laser line
-      const pulse = 0.4 + Math.sin(state.frame * 0.15) * 0.2;
-      ctx.strokeStyle = `rgba(255, 30, 30, ${pulse})`;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(gun.x, gun.y - 10);
-      ctx.lineTo(nearX, nearY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Target reticle
-      ctx.strokeStyle = `rgba(255, 50, 50, ${pulse + 0.2})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(nearX, nearY, 10, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(nearX - 14, nearY); ctx.lineTo(nearX - 6, nearY);
-      ctx.moveTo(nearX + 6, nearY); ctx.lineTo(nearX + 14, nearY);
-      ctx.moveTo(nearX, nearY - 14); ctx.lineTo(nearX, nearY - 6);
-      ctx.moveTo(nearX, nearY + 6); ctx.lineTo(nearX, nearY + 14);
-      ctx.stroke();
-    }
+    const laserLen = Math.max(W, H);
+    const endX = gun.x + Math.cos(state.gunAngle) * laserLen;
+    const endY = (gun.y - 8) + Math.sin(state.gunAngle) * laserLen;
+    const pulse = 0.3 + Math.sin(state.frame * 0.2) * 0.15;
+    // Glow
+    ctx.strokeStyle = `rgba(255, 0, 0, ${pulse * 0.3})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(gun.x, gun.y - 8);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    // Core beam
+    ctx.strokeStyle = `rgba(255, 40, 40, ${pulse})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(gun.x, gun.y - 8);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    // Dot at muzzle
+    ctx.fillStyle = `rgba(255, 80, 80, ${pulse + 0.3})`;
+    ctx.beginPath();
+    ctx.arc(gun.x + Math.cos(state.gunAngle) * GUN_LENGTH, (gun.y - 8) + Math.sin(state.gunAngle) * GUN_LENGTH, 3, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Missiles with smoke trail
@@ -694,9 +675,9 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     const angle = Math.atan2(m.vy, m.vx);
     const trailDx = -Math.cos(angle);
     const trailDy = -Math.sin(angle);
-    for (let t = 1; t <= 6; t++) {
-      const alpha = 0.3 - t * 0.04;
-      const size = 3 + t * 1.5;
+    for (let t = 1; t <= 12; t++) {
+      const alpha = 0.35 - t * 0.025;
+      const size = 2.5 + t * 1.2;
       const ox = (Math.random() - 0.5) * 3;
       const oy = (Math.random() - 0.5) * 3;
       ctx.fillStyle = `rgba(180,180,180,${alpha})`;
@@ -780,7 +761,7 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     const activePowerup = state.activePowerup;
     const pt = POWERUP_TYPES.find(t => t.type === activePowerup.type);
     if (pt) {
-      const timeLeft = activePowerup.timer / POWERUP_DURATION;
+      const timeLeft = activePowerup.timer / S('powerups', 'duration');
       const expiring = timeLeft < 0.25;
       const visible = !expiring || state.frame % 20 < 14;
 

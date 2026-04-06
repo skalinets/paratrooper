@@ -1,4 +1,4 @@
-import { S, isMobile, MAX_HEAT, POWERUP_TYPES, POWERUP_DURATION } from './config';
+import { S, isMobile, MAX_HEAT, POWERUP_TYPES } from './config';
 import { addExplosion, addFloatingText, addKill, explosiveBlast, spawnDebris } from './combat';
 import { spawnHelicopter, spawnJet, spawnParatrooper } from './entities';
 import type { GameState, Gun } from './types';
@@ -26,17 +26,36 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     if (d.y > canvas.height) state.debris.splice(i, 1);
   }
 
-  // Update missiles (homing)
+  // Update missiles (homing - always hit)
   for (let i = state.missiles.length - 1; i >= 0; i--) {
     const m = state.missiles[i];
-    // Steer toward target
+    // Re-acquire: update target to current position of nearest enemy
+    let bestDist = Infinity;
+    for (const h of state.helicopters) {
+      const d = Math.hypot(h.x - m.x, h.y - m.y);
+      if (d < bestDist) { bestDist = d; m.targetX = h.x; m.targetY = h.y; }
+    }
+    for (const j of state.jets) {
+      const d = Math.hypot(j.x - m.x, j.y - m.y);
+      if (d < bestDist) { bestDist = d; m.targetX = j.x; m.targetY = j.y; }
+    }
+    for (const p of state.paratroopers) {
+      if (p.landed) continue;
+      const d = Math.hypot(p.x - m.x, p.y - m.y);
+      if (d < bestDist) { bestDist = d; m.targetX = p.x; m.targetY = p.y; }
+    }
+    for (const bm of state.bombs) {
+      const d = Math.hypot(bm.x - m.x, bm.y - m.y);
+      if (d < bestDist) { bestDist = d; m.targetX = bm.x; m.targetY = bm.y; }
+    }
+    // Strong homing - steer aggressively
     const dx = m.targetX - m.x;
     const dy = m.targetY - m.y;
     const dist = Math.hypot(dx, dy);
     if (dist > 1) {
-      const speed = 5;
-      m.vx += (dx / dist) * 0.5;
-      m.vy += (dy / dist) * 0.5;
+      const speed = S('powerups', 'missileSpeed');
+      m.vx += (dx / dist) * 0.8;
+      m.vy += (dy / dist) * 0.8;
       const v = Math.hypot(m.vx, m.vy);
       if (v > speed) { m.vx = (m.vx / v) * speed; m.vy = (m.vy / v) * speed; }
     }
@@ -163,30 +182,18 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     // Missile auto-fire every 2 seconds
     if (state.activePowerup && state.activePowerup.type === 'missile') {
       state.missileTimer++;
-      if (state.missileTimer >= 120) {
+      if (state.missileTimer >= S('powerups', 'missileRate')) {
         state.missileTimer = 0;
-        // Find nearest airborne enemy
-        let nearX = 0, nearY = 0, nearDist = Infinity;
-        for (const h of state.helicopters) {
-          const d = Math.hypot(h.x - gun.x, h.y - gun.y);
-          if (d < nearDist) { nearDist = d; nearX = h.x; nearY = h.y; }
-        }
-        for (const j of state.jets) {
-          const d = Math.hypot(j.x - gun.x, j.y - gun.y);
-          if (d < nearDist) { nearDist = d; nearX = j.x; nearY = j.y; }
-        }
-        for (const p of state.paratroopers) {
-          if (p.landed) continue;
-          const d = Math.hypot(p.x - gun.x, p.y - gun.y);
-          if (d < nearDist) { nearDist = d; nearX = p.x; nearY = p.y; }
-        }
-        for (const bm of state.bombs) {
-          const d = Math.hypot(bm.x - gun.x, bm.y - gun.y);
-          if (d < nearDist) { nearDist = d; nearX = bm.x; nearY = bm.y; }
-        }
-        if (nearDist < Infinity) {
-          const launchX = gun.x + (Math.random() - 0.5) * 40;
-          state.missiles.push({ x: launchX, y: canvas.height - 10, vx: 0, vy: -3, targetX: nearX, targetY: nearY, life: 300 });
+        // Collect all airborne targets
+        const targets: { x: number; y: number }[] = [];
+        for (const h of state.helicopters) targets.push({ x: h.x, y: h.y });
+        for (const j of state.jets) targets.push({ x: j.x, y: j.y });
+        for (const p of state.paratroopers) { if (!p.landed) targets.push({ x: p.x, y: p.y }); }
+        for (const bm of state.bombs) targets.push({ x: bm.x, y: bm.y });
+        if (targets.length > 0) {
+          // Pick random target
+          const t = targets[Math.floor(Math.random() * targets.length)]!;
+          state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: t.x, targetY: t.y, life: 300 });
         }
       }
     }
@@ -228,10 +235,10 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
           state.bombs = [];
           addFloatingText(state, 'NUKE!', pu.x, pu.y, '#f4f');
         } else if (pu.type === 'freeze') {
-          state.activePowerup = { type: 'freeze', timer: POWERUP_DURATION };
+          state.activePowerup = { type: 'freeze', timer: S('powerups', 'duration') };
           addFloatingText(state, 'FREEZE!', pu.x, pu.y, '#aef');
         } else {
-          state.activePowerup = { type: pu.type, timer: POWERUP_DURATION };
+          state.activePowerup = { type: pu.type, timer: S('powerups', 'duration') };
           addFloatingText(state, pu.label, pu.x, pu.y, pu.color);
         }
         state.powerups.splice(i, 1);

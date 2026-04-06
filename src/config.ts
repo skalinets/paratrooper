@@ -41,6 +41,11 @@ export const settings: Settings = {
     powerupInterval: { val: defaults.game!.powerupInterval!, min: 200, max: 1500, step: 50, label: 'Powerup Interval' },
     godMode: { val: defaults.game!.godMode!, min: 0, max: 1, step: 1, label: 'God Mode' },
   },
+  powerups: {
+    duration: { val: defaults.powerups!.duration!, min: 120, max: 1200, step: 60, label: 'Duration (frames)' },
+    missileRate: { val: defaults.powerups!.missileRate!, min: 30, max: 300, step: 10, label: 'Missile Fire Rate' },
+    missileSpeed: { val: defaults.powerups!.missileSpeed!, min: 3, max: 12, step: 0.5, label: 'Missile Speed' },
+  },
 };
 
 export function S<C extends SettingsCategory>(category: C, key: keyof Settings[C]): number {
