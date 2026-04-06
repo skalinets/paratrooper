@@ -119,8 +119,8 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.abs(b.x - pu.x) < puHit && Math.abs(b.y - pu.y) < puHit) {
         state.bullets.splice(j, 1);
         if (pu.type === 'nuke') {
-          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 12, ['#888','#aaa','#667','#99a']); });
-          state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 10, ['#a44','#844','#933','#c55']); });
+          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 24, ['#888','#adf','#777','#bbb','#ccc','#999']); });
+          state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 20, ['#aa4444','#884444','#993333','#ddf','#aa4444']); });
           state.bombs.forEach(bm => { addExplosion(state, bm.x, bm.y, 15); });
           for (let k = state.paratroopers.length - 1; k >= 0; k--) {
             const p = state.paratroopers[k];

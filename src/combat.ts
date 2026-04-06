@@ -13,9 +13,9 @@ export function spawnDebris(state: GameState, x: number, y: number, count: numbe
     state.debris.push({
       x: x + (Math.random() - 0.5) * 10,
       y: y + (Math.random() - 0.5) * 6,
-      vx: (Math.random() - 0.5) * 5,
-      vy: -Math.random() * 4 - 1,
-      size: 3 + Math.random() * 6,
+      vx: (Math.random() - 0.5) * 6,
+      vy: -Math.random() * 5 - 1.5,
+      size: 5 + Math.random() * 10,
       color: palette[Math.floor(Math.random() * palette.length)]!,
       rotation: Math.random() * Math.PI * 2,
       rotSpeed: (Math.random() - 0.5) * 0.4,

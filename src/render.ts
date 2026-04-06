@@ -646,7 +646,7 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.translate(d.x, d.y);
     ctx.rotate(d.rotation);
     ctx.fillStyle = d.color;
-    ctx.fillRect(-d.size / 2, -1, d.size, 2.5);
+    ctx.fillRect(-d.size / 2, -1.5, d.size, 3);
     ctx.restore();
   }
 
