@@ -39,15 +39,6 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       const d = Math.hypot(j.x - m.x, j.y - m.y);
       if (d < bestDist) { bestDist = d; m.targetX = j.x; m.targetY = j.y; }
     }
-    for (const p of state.paratroopers) {
-      if (p.landed) continue;
-      const d = Math.hypot(p.x - m.x, p.y - m.y);
-      if (d < bestDist) { bestDist = d; m.targetX = p.x; m.targetY = p.y; }
-    }
-    for (const bm of state.bombs) {
-      const d = Math.hypot(bm.x - m.x, bm.y - m.y);
-      if (d < bestDist) { bestDist = d; m.targetX = bm.x; m.targetY = bm.y; }
-    }
     // Strong homing - steer aggressively
     const dx = m.targetX - m.x;
     const dy = m.targetY - m.y;
@@ -85,26 +76,6 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         addKill(state, 100, jt.x, jt.y);
         spawnDebris(state, jt.x, jt.y, 20, ['#aa4444','#884444','#993333','#ddf','#aa4444']);
         state.jets.splice(j, 1);
-        hit = true; break;
-      }
-    }
-    if (!hit) for (let j = state.paratroopers.length - 1; j >= 0; j--) {
-      const p = state.paratroopers[j];
-      if (!p.landed && Math.hypot(m.x - p.x, m.y - p.y) < 15) {
-        addExplosion(state, p.x, p.y, 15);
-        addKill(state, 25, p.x, p.y);
-        spawnDebris(state, p.x, p.y, 3, ['#4a4','#da8','#696'], 0.5);
-        state.paratroopers.splice(j, 1);
-        hit = true; break;
-      }
-    }
-    if (!hit) for (let j = state.bombs.length - 1; j >= 0; j--) {
-      const b = state.bombs[j];
-      if (Math.hypot(m.x - b.x, m.y - b.y) < 12) {
-        addExplosion(state, b.x, b.y, 20);
-        addKill(state, 75, b.x, b.y);
-        spawnDebris(state, b.x, b.y, 4, ['#555','#666','#f44']);
-        state.bombs.splice(j, 1);
         hit = true; break;
       }
     }
@@ -188,8 +159,6 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         const targets: { x: number; y: number }[] = [];
         for (const h of state.helicopters) targets.push({ x: h.x, y: h.y });
         for (const j of state.jets) targets.push({ x: j.x, y: j.y });
-        for (const p of state.paratroopers) { if (!p.landed) targets.push({ x: p.x, y: p.y }); }
-        for (const bm of state.bombs) targets.push({ x: bm.x, y: bm.y });
         if (targets.length > 0) {
           // Pick random target
           const t = targets[Math.floor(Math.random() * targets.length)]!;
