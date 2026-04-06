@@ -43,37 +43,38 @@ export function addKill(state: GameState, points: number, x: number, y: number):
 export function explosiveBlast(state: GameState, x: number, y: number): void {
   const radius = 120;
   addExplosion(state, x, y, 40);
-  for (let i = state.helicopters.length - 1; i >= 0; i--) {
-    const h = state.helicopters[i];
+  // Use filter instead of splice to avoid corrupting outer loop indices
+  state.helicopters = state.helicopters.filter(h => {
     if (Math.hypot(h.x - x, h.y - y) < radius) {
       addExplosion(state, h.x, h.y, 25);
       addKill(state, 50, h.x, h.y);
-      state.helicopters.splice(i, 1);
+      return false;
     }
-  }
-  for (let i = state.jets.length - 1; i >= 0; i--) {
-    const j = state.jets[i];
+    return true;
+  });
+  state.jets = state.jets.filter(j => {
     if (Math.hypot(j.x - x, j.y - y) < radius) {
       addExplosion(state, j.x, j.y, 25);
       addKill(state, 100, j.x, j.y);
-      state.jets.splice(i, 1);
+      return false;
     }
-  }
-  for (let i = state.bombs.length - 1; i >= 0; i--) {
-    const b = state.bombs[i];
+    return true;
+  });
+  state.bombs = state.bombs.filter(b => {
     if (Math.hypot(b.x - x, b.y - y) < radius) {
       addExplosion(state, b.x, b.y, 15);
-      state.bombs.splice(i, 1);
+      return false;
     }
-  }
-  for (let i = state.paratroopers.length - 1; i >= 0; i--) {
-    const p = state.paratroopers[i];
+    return true;
+  });
+  state.paratroopers = state.paratroopers.filter(p => {
     if (!p.landed && Math.hypot(p.x - x, p.y - y) < radius) {
       addExplosion(state, p.x, p.y, 12);
       addKill(state, 25, p.x, p.y);
-      state.paratroopers.splice(i, 1);
+      return false;
     }
-  }
+    return true;
+  });
 }
 
 export function shoot(state: GameState, gun: Gun): void {
