@@ -74,7 +74,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (!p.landed && Math.hypot(m.x - p.x, m.y - p.y) < 15) {
         addExplosion(state, p.x, p.y, 15);
         addKill(state, 25, p.x, p.y);
-        spawnDebris(state, p.x, p.y, 6, ['#4a4','#da8','#696','#585']);
+        spawnDebris(state, p.x, p.y, 3, ['#4a4','#da8','#696'], 0.5);
         state.paratroopers.splice(j, 1);
         hit = true; break;
       }
@@ -84,7 +84,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.hypot(m.x - b.x, m.y - b.y) < 12) {
         addExplosion(state, b.x, b.y, 20);
         addKill(state, 75, b.x, b.y);
-        spawnDebris(state, b.x, b.y, 8, ['#555','#666','#f44','#f80']);
+        spawnDebris(state, b.x, b.y, 4, ['#555','#666','#f44']);
         state.bombs.splice(j, 1);
         hit = true; break;
       }
@@ -185,7 +185,8 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
           if (d < nearDist) { nearDist = d; nearX = bm.x; nearY = bm.y; }
         }
         if (nearDist < Infinity) {
-          state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: nearX, targetY: nearY, life: 300 });
+          const launchX = gun.x + (Math.random() - 0.5) * 40;
+          state.missiles.push({ x: launchX, y: canvas.height - 10, vx: 0, vy: -3, targetX: nearX, targetY: nearY, life: 300 });
         }
       }
     }
@@ -390,7 +391,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         state.bombs.splice(i, 1);
         state.bullets.splice(k, 1);
         addKill(state, 75, ex, ey);
-        spawnDebris(state, ex, ey, 8, ['#555','#666','#f44','#f80']);
+        spawnDebris(state, ex, ey, 4, ['#555','#666','#f44'], 0.5);
         if (bl.explosive) explosiveBlast(state, ex, ey);
         break;
       }
@@ -423,7 +424,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
             state.paratroopers.splice(hi, 1);
             state.paratroopers.splice(lo, 1);
             addKill(state, 15, p.x, p.y);
-            spawnDebris(state, p.x, p.y, 6, ['#4a4','#da8','#696','#585']);
+            spawnDebris(state, p.x, p.y, 3, ['#4a4','#da8','#696'], 0.5);
             i = -1; break;
           }
         }
@@ -483,13 +484,13 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
             // Shot the chute - trooper falls
             p.chuteOpen = false; p.falling = true; p.vy = 0.5; p.vx = 0; p.landingX = null;
             addKill(state, 25, p.x, p.y - 15);
-            spawnDebris(state, p.x, p.y - 15, 7, ['#e44','#fff','#aaa','#f66']);
+            spawnDebris(state, p.x, p.y - 15, 4, ['#e44','#fff','#aaa'], 0.5);
           } else {
             // Direct hit - trooper killed (works for falling troopers too)
             addExplosion(state, p.x, p.y, 15);
             state.paratroopers.splice(i, 1);
             addKill(state, 25, p.x, p.y);
-            spawnDebris(state, p.x, p.y, 6, ['#4a4','#da8','#696','#585']);
+            spawnDebris(state, p.x, p.y, 3, ['#4a4','#da8','#696'], 0.5);
           }
           break;
         }

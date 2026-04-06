@@ -7,15 +7,15 @@ export function addExplosion(state: GameState, x: number, y: number, size: numbe
 
 const DEBRIS_COLORS = ['#888', '#666', '#aaa', '#555', '#999', '#774', '#997'];
 
-export function spawnDebris(state: GameState, x: number, y: number, count: number, colors?: string[]): void {
+export function spawnDebris(state: GameState, x: number, y: number, count: number, colors?: string[], scale: number = 1): void {
   const palette = colors ?? DEBRIS_COLORS;
   for (let i = 0; i < count; i++) {
     state.debris.push({
-      x: x + (Math.random() - 0.5) * 10,
-      y: y + (Math.random() - 0.5) * 6,
-      vx: (Math.random() - 0.5) * 6,
-      vy: -Math.random() * 5 - 1.5,
-      size: 5 + Math.random() * 10,
+      x: x + (Math.random() - 0.5) * 10 * scale,
+      y: y + (Math.random() - 0.5) * 6 * scale,
+      vx: (Math.random() - 0.5) * 6 * scale,
+      vy: -Math.random() * 5 * scale - 1.5,
+      size: (5 + Math.random() * 10) * scale,
       color: palette[Math.floor(Math.random() * palette.length)]!,
       rotation: Math.random() * Math.PI * 2,
       rotSpeed: (Math.random() - 0.5) * 0.4,

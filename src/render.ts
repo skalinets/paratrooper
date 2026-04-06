@@ -182,6 +182,7 @@ function drawJet(ctx: CanvasRenderingContext2D, j: Jet): void {
 function drawBomb(ctx: CanvasRenderingContext2D, b: Bomb): void {
   ctx.save();
   ctx.translate(b.x, b.y);
+  ctx.scale(0.5, 0.5);
 
   if (b.chuteOpen) {
     // Parachute canopy
@@ -687,27 +688,41 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     }
   }
 
-  // Missiles
+  // Missiles with smoke trail
   for (const m of state.missiles) {
+    // Smoke trail (multiple puffs behind missile)
+    const angle = Math.atan2(m.vy, m.vx);
+    const trailDx = -Math.cos(angle);
+    const trailDy = -Math.sin(angle);
+    for (let t = 1; t <= 6; t++) {
+      const alpha = 0.3 - t * 0.04;
+      const size = 3 + t * 1.5;
+      const ox = (Math.random() - 0.5) * 3;
+      const oy = (Math.random() - 0.5) * 3;
+      ctx.fillStyle = `rgba(180,180,180,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(m.x + trailDx * t * 6 + ox, m.y + trailDy * t * 6 + oy, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Missile body
     ctx.save();
     ctx.translate(m.x, m.y);
-    const angle = Math.atan2(m.vy, m.vx);
     ctx.rotate(angle + Math.PI / 2);
-    // Trail
-    ctx.fillStyle = 'rgba(255, 160, 0, 0.4)';
+    // Flame
+    ctx.fillStyle = `rgba(255, ${100 + Math.floor(Math.random() * 80)}, 0, 0.7)`;
     ctx.beginPath();
-    ctx.moveTo(-2, 4); ctx.lineTo(0, 12 + Math.random() * 4); ctx.lineTo(2, 4);
+    ctx.moveTo(-2, 4); ctx.lineTo(0, 10 + Math.random() * 5); ctx.lineTo(2, 4);
     ctx.fill();
     // Body
-    ctx.fillStyle = '#fa0';
+    ctx.fillStyle = '#ddd';
     ctx.beginPath();
-    ctx.moveTo(0, -6); ctx.lineTo(-3, 4); ctx.lineTo(3, 4);
+    ctx.moveTo(0, -7); ctx.lineTo(-3, 4); ctx.lineTo(3, 4);
     ctx.closePath();
     ctx.fill();
     // Nose
     ctx.fillStyle = '#f44';
     ctx.beginPath();
-    ctx.arc(0, -5, 2, 0, Math.PI * 2);
+    ctx.arc(0, -6, 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
