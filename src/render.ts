@@ -1,6 +1,8 @@
 import { S, isMobile, settings, settingsCategories, GUN_LENGTH, MAX_HEAT, POWERUP_TYPES } from './config';
 import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper, SettingsCategory } from './types';
 
+let nightCanvas: HTMLCanvasElement | null = null;
+
 function drawHeatBar(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
   const barW = 160;
   const barH = 14;
@@ -731,49 +733,58 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
   // Landed count indicators
   drawLandedIndicators(ctx, canvas, state);
 
-  // Night mode overlay
+  // Night mode overlay - offscreen canvas mask
   if (state.nightMode && !state.gameOver) {
-    ctx.save();
-    // Draw dark overlay
-    ctx.fillStyle = 'rgba(0, 0, 10, 0.88)';
-    ctx.fillRect(0, 0, W, H);
-    // Cut out spotlight from turret direction
-    ctx.globalCompositeOperation = 'destination-out';
+    if (!nightCanvas || nightCanvas.width !== W || nightCanvas.height !== H) {
+      nightCanvas = document.createElement('canvas');
+      nightCanvas.width = W;
+      nightCanvas.height = H;
+    }
+    const nctx = nightCanvas.getContext('2d')!;
+    // Fill with darkness
+    nctx.clearRect(0, 0, W, H);
+    nctx.fillStyle = 'rgba(0, 0, 15, 0.9)';
+    nctx.fillRect(0, 0, W, H);
+    // Cut out spotlight cone
+    nctx.globalCompositeOperation = 'destination-out';
     const spotAngle = state.gunAngle;
     const spotLen = Math.max(W, H) * 1.2;
-    const spotWidth = 0.25; // cone half-angle in radians
+    const spotWidth = 0.28;
     const gx = gun.x, gy = gun.y - 8;
-    ctx.beginPath();
-    ctx.moveTo(gx, gy);
-    ctx.arc(gx, gy, spotLen, spotAngle - spotWidth, spotAngle + spotWidth);
-    ctx.closePath();
-    const spotGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, spotLen);
+    nctx.beginPath();
+    nctx.moveTo(gx, gy);
+    nctx.arc(gx, gy, spotLen, spotAngle - spotWidth, spotAngle + spotWidth);
+    nctx.closePath();
+    const spotGrad = nctx.createRadialGradient(gx, gy, 10, gx, gy, spotLen);
     spotGrad.addColorStop(0, 'rgba(0,0,0,1)');
-    spotGrad.addColorStop(0.7, 'rgba(0,0,0,0.6)');
+    spotGrad.addColorStop(0.6, 'rgba(0,0,0,0.7)');
     spotGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = spotGrad;
-    ctx.fill();
-    // Cut out circles around explosions (illumination)
+    nctx.fillStyle = spotGrad;
+    nctx.fill();
+    // Cut out explosion illumination
     for (const e of state.explosions) {
-      const illumRadius = e.size * 3 * e.life;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, illumRadius, 0, Math.PI * 2);
-      const eGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, illumRadius);
-      eGrad.addColorStop(0, `rgba(0,0,0,${e.life})`);
-      eGrad.addColorStop(0.5, `rgba(0,0,0,${e.life * 0.5})`);
-      eGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = eGrad;
-      ctx.fill();
+      const r = e.size * 4 * e.life;
+      if (r < 1) continue;
+      nctx.beginPath();
+      nctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+      const eg = nctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, r);
+      eg.addColorStop(0, `rgba(0,0,0,${Math.min(1, e.life * 1.5)})`);
+      eg.addColorStop(0.6, `rgba(0,0,0,${e.life * 0.4})`);
+      eg.addColorStop(1, 'rgba(0,0,0,0)');
+      nctx.fillStyle = eg;
+      nctx.fill();
     }
-    // Small glow around gun area
-    ctx.beginPath();
-    ctx.arc(gun.x, gun.y, 40, 0, Math.PI * 2);
-    const gunGrad = ctx.createRadialGradient(gun.x, gun.y, 0, gun.x, gun.y, 40);
-    gunGrad.addColorStop(0, 'rgba(0,0,0,0.7)');
-    gunGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = gunGrad;
-    ctx.fill();
-    ctx.restore();
+    // Gun area glow
+    nctx.beginPath();
+    nctx.arc(gun.x, gun.y, 50, 0, Math.PI * 2);
+    const gg = nctx.createRadialGradient(gun.x, gun.y, 0, gun.x, gun.y, 50);
+    gg.addColorStop(0, 'rgba(0,0,0,0.8)');
+    gg.addColorStop(1, 'rgba(0,0,0,0)');
+    nctx.fillStyle = gg;
+    nctx.fill();
+    nctx.globalCompositeOperation = 'source-over';
+    // Draw mask onto main canvas
+    ctx.drawImage(nightCanvas, 0, 0);
   }
 
   // HUD: score
