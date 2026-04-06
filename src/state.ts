@@ -53,6 +53,7 @@ export function createState(): GameState {
     settingsCategory: 0,
     settingsParam: 0,
     settingsDrillDown: false,
+    nightMode: false,
   };
 }
 

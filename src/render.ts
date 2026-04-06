@@ -731,6 +731,51 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
   // Landed count indicators
   drawLandedIndicators(ctx, canvas, state);
 
+  // Night mode overlay
+  if (state.nightMode && !state.gameOver) {
+    ctx.save();
+    // Draw dark overlay
+    ctx.fillStyle = 'rgba(0, 0, 10, 0.88)';
+    ctx.fillRect(0, 0, W, H);
+    // Cut out spotlight from turret direction
+    ctx.globalCompositeOperation = 'destination-out';
+    const spotAngle = state.gunAngle;
+    const spotLen = Math.max(W, H) * 1.2;
+    const spotWidth = 0.25; // cone half-angle in radians
+    const gx = gun.x, gy = gun.y - 8;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.arc(gx, gy, spotLen, spotAngle - spotWidth, spotAngle + spotWidth);
+    ctx.closePath();
+    const spotGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, spotLen);
+    spotGrad.addColorStop(0, 'rgba(0,0,0,1)');
+    spotGrad.addColorStop(0.7, 'rgba(0,0,0,0.6)');
+    spotGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = spotGrad;
+    ctx.fill();
+    // Cut out circles around explosions (illumination)
+    for (const e of state.explosions) {
+      const illumRadius = e.size * 3 * e.life;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, illumRadius, 0, Math.PI * 2);
+      const eGrad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, illumRadius);
+      eGrad.addColorStop(0, `rgba(0,0,0,${e.life})`);
+      eGrad.addColorStop(0.5, `rgba(0,0,0,${e.life * 0.5})`);
+      eGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = eGrad;
+      ctx.fill();
+    }
+    // Small glow around gun area
+    ctx.beginPath();
+    ctx.arc(gun.x, gun.y, 40, 0, Math.PI * 2);
+    const gunGrad = ctx.createRadialGradient(gun.x, gun.y, 0, gun.x, gun.y, 40);
+    gunGrad.addColorStop(0, 'rgba(0,0,0,0.7)');
+    gunGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gunGrad;
+    ctx.fill();
+    ctx.restore();
+  }
+
   // HUD: score
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 20px monospace';
@@ -804,9 +849,9 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.font = 'bold 32px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`WAVE ${state.wave}`, W / 2, H / 2);
-    ctx.fillStyle = '#adf';
+    ctx.fillStyle = state.nightMode ? '#f84' : '#adf';
     ctx.font = '16px monospace';
-    ctx.fillText('INCOMING!', W / 2, H / 2 + 28);
+    ctx.fillText(state.nightMode ? 'NIGHT ROUND!' : 'INCOMING!', W / 2, H / 2 + 28);
     ctx.globalAlpha = 1;
   }
 

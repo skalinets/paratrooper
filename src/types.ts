@@ -241,4 +241,6 @@ export interface GameState {
   settingsCategory: number;
   settingsParam: number;
   settingsDrillDown: boolean;
+  // Night mode
+  nightMode: boolean;
 }

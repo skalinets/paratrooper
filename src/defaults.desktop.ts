@@ -34,7 +34,7 @@ export const desktopDefaults: ConfigValues = {
     godMode: 0,
   },
   powerups: {
-    duration: 480,
+    duration: 720,
     missileRate: 120,
     missileSpeed: 6,
   },

@@ -41,7 +41,7 @@ export function addKill(state: GameState, points: number, x: number, y: number):
 }
 
 export function explosiveBlast(state: GameState, x: number, y: number): void {
-  const radius = 60;
+  const radius = 120;
   addExplosion(state, x, y, 40);
   for (let i = state.helicopters.length - 1; i >= 0; i--) {
     const h = state.helicopters[i];

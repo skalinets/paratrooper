@@ -262,6 +262,11 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     const b = state.bullets[i];
     b.x += b.vx; b.y += b.vy;
     if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+      if (b.explosive) {
+        const ex = Math.max(0, Math.min(canvas.width, b.x));
+        const ey = Math.max(0, Math.min(canvas.height, b.y));
+        explosiveBlast(state, ex, ey);
+      }
       state.bullets.splice(i, 1);
     }
   }
@@ -363,12 +368,13 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       const bombHit = isMobile ? 8 : 12;
       if (Math.abs(bl.x - b.x) < bombHit && Math.abs(bl.y - b.y) < bombHit) {
         const ex = b.x, ey = b.y;
-        addExplosion(state, ex, ey, 20);
+        addExplosion(state, ex, ey, 40);
         state.bombs.splice(i, 1);
         state.bullets.splice(k, 1);
         addKill(state, 75, ex, ey);
-        spawnDebris(state, ex, ey, 4, ['#555','#666','#f44'], 0.5);
-        if (bl.explosive) explosiveBlast(state, ex, ey);
+        spawnDebris(state, ex, ey, 8, ['#555','#666','#f44','#f80']);
+        // Bombs always create a blast radius
+        explosiveBlast(state, ex, ey);
         break;
       }
     }
@@ -487,6 +493,8 @@ export function startWave(state: GameState): void {
   state.waveHelisSpawned = 0;
   state.waveJetsSpawned = 0;
   state.waveSpawnTimer = 0;
+  // Night rounds every other wave starting from wave 3
+  state.nightMode = state.wave >= 3 && state.wave % 2 === 1;
 }
 
 export function startEndSequence(state: GameState, gun: Gun): void {
