@@ -4,10 +4,10 @@ import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper, Settings
 let nightCanvas: HTMLCanvasElement | null = null;
 
 function drawHeatBar(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
-  const barW = 160;
-  const barH = 14;
-  const x = canvas.width / 2 - barW / 2;
-  const y = canvas.height - 28;
+  const barW = 100;
+  const barH = 8;
+  const x = canvas.width - barW - 10;
+  const y = 32;
   const ratio = state.heat / MAX_HEAT;
 
   // Background
@@ -34,10 +34,10 @@ function drawHeatBar(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, s
   ctx.strokeRect(x, y, barW, barH);
 
   // Label
-  ctx.fillStyle = state.overheated ? '#f88' : '#ccc';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(state.overheated ? 'OVERHEAT' : 'HEAT', canvas.width / 2, y - 2);
+  ctx.fillStyle = state.overheated ? '#f88' : '#888';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(state.overheated ? 'OVERHEAT' : 'HEAT', x - 4, y + 7);
 }
 
 function drawGun(ctx: CanvasRenderingContext2D, state: GameState, gun: Gun): void {
@@ -45,28 +45,45 @@ function drawGun(ctx: CanvasRenderingContext2D, state: GameState, gun: Gun): voi
   const gy = gun.y;
 
   // Base platform
-  ctx.fillStyle = '#556';
+  ctx.fillStyle = '#889';
   ctx.fillRect(gx - gun.baseWidth / 2, gy, gun.baseWidth, gun.baseHeight);
+  ctx.strokeStyle = '#aab';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(gx - gun.baseWidth / 2, gy, gun.baseWidth, gun.baseHeight);
 
   // Turret dome
-  ctx.fillStyle = '#778';
+  ctx.fillStyle = '#99b';
   ctx.beginPath();
   ctx.arc(gx, gy, 18, Math.PI, 0);
   ctx.fill();
+  ctx.strokeStyle = '#bbd';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(gx, gy, 18, Math.PI, 0);
+  ctx.stroke();
 
   // Barrel
   ctx.save();
   ctx.translate(gx, gy);
   ctx.rotate(state.gunAngle);
-  ctx.strokeStyle = state.overheated ? '#f44' : '#99a';
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = state.overheated ? '#f44' : '#ccd';
+  ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(GUN_LENGTH, 0);
   ctx.stroke();
+  // Barrel outline
+  ctx.strokeStyle = state.overheated ? '#a22' : '#eef';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -3);
+  ctx.lineTo(GUN_LENGTH, -3);
+  ctx.moveTo(0, 3);
+  ctx.lineTo(GUN_LENGTH, 3);
+  ctx.stroke();
 
   // Muzzle dot
-  ctx.fillStyle = state.overheated ? '#f66' : '#bbc';
+  ctx.fillStyle = state.overheated ? '#f66' : '#eef';
   ctx.beginPath();
   ctx.arc(GUN_LENGTH, 0, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -542,7 +559,8 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     if (state.nightMode) {
       for (let wy = groundY - bh + 8; wy < groundY - 5; wy += 12) {
         for (let wx = bx - bw / 2 + 4; wx < bx + bw / 2 - 4; wx += 8) {
-          ctx.fillStyle = Math.random() > 0.4 ? 'rgba(255,220,100,0.6)' : 'rgba(100,150,200,0.15)';
+          const winOn = ((wx * 7 + wy * 13 + i * 31) % 10) > 3;
+          ctx.fillStyle = winOn ? 'rgba(255,220,100,0.6)' : 'rgba(100,150,200,0.15)';
           ctx.fillRect(wx, wy, 4, 5);
         }
       }
