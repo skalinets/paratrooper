@@ -11,14 +11,14 @@ export function spawnDebris(state: GameState, x: number, y: number, count: numbe
   const palette = colors ?? DEBRIS_COLORS;
   for (let i = 0; i < count; i++) {
     state.debris.push({
-      x,
-      y,
-      vx: (Math.random() - 0.5) * 4,
-      vy: -Math.random() * 3 - 1,
-      size: 1 + Math.random() * 3,
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 6,
+      vx: (Math.random() - 0.5) * 5,
+      vy: -Math.random() * 4 - 1,
+      size: 3 + Math.random() * 6,
       color: palette[Math.floor(Math.random() * palette.length)]!,
       rotation: Math.random() * Math.PI * 2,
-      rotSpeed: (Math.random() - 0.5) * 0.3,
+      rotSpeed: (Math.random() - 0.5) * 0.4,
     });
   }
 }

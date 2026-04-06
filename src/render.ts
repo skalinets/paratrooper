@@ -640,13 +640,13 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.fill();
   }
 
-  // Debris
+  // Debris (bars)
   for (const d of state.debris) {
     ctx.save();
     ctx.translate(d.x, d.y);
     ctx.rotate(d.rotation);
     ctx.fillStyle = d.color;
-    ctx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size);
+    ctx.fillRect(-d.size / 2, -1, d.size, 2.5);
     ctx.restore();
   }
 

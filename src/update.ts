@@ -119,8 +119,8 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.abs(b.x - pu.x) < puHit && Math.abs(b.y - pu.y) < puHit) {
         state.bullets.splice(j, 1);
         if (pu.type === 'nuke') {
-          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 6, ['#888','#aaa','#667']); });
-          state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 5, ['#a44','#844','#933']); });
+          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 12, ['#888','#aaa','#667','#99a']); });
+          state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 10, ['#a44','#844','#933','#c55']); });
           state.bombs.forEach(bm => { addExplosion(state, bm.x, bm.y, 15); });
           for (let k = state.paratroopers.length - 1; k >= 0; k--) {
             const p = state.paratroopers[k];
@@ -295,7 +295,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         state.bombs.splice(i, 1);
         state.bullets.splice(k, 1);
         addKill(state, 75, ex, ey);
-        spawnDebris(state, ex, ey, 4, ['#555','#666','#f44']);
+        spawnDebris(state, ex, ey, 8, ['#555','#666','#f44','#f80']);
         if (bl.explosive) explosiveBlast(state, ex, ey);
         break;
       }
@@ -328,7 +328,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
             state.paratroopers.splice(hi, 1);
             state.paratroopers.splice(lo, 1);
             addKill(state, 15, p.x, p.y);
-            spawnDebris(state, p.x, p.y, 3, ['#4a4','#da8','#696']);
+            spawnDebris(state, p.x, p.y, 6, ['#4a4','#da8','#696','#585']);
             i = -1; break;
           }
         }
@@ -383,12 +383,12 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
           if (p.chuteOpen) {
             p.chuteOpen = false; p.falling = true; p.vy = 0.5; p.vx = 0; p.landingX = null;
             addKill(state, 25, p.x, p.y - 15);
-            spawnDebris(state, p.x, p.y - 15, 3, ['#e44','#fff','#aaa']);
+            spawnDebris(state, p.x, p.y - 15, 7, ['#e44','#fff','#aaa','#f66']);
           } else {
             addExplosion(state, p.x, p.y, 15);
             state.paratroopers.splice(i, 1);
             addKill(state, 25, p.x, p.y);
-            spawnDebris(state, p.x, p.y, 3, ['#4a4','#da8','#696']);
+            spawnDebris(state, p.x, p.y, 6, ['#4a4','#da8','#696','#585']);
           }
           break;
         }
