@@ -135,14 +135,16 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     }
   }
 
-  // Wave logic
-  if (state.waveAnnounceTimer > 0) {
+  const frozen: boolean = !!(state.activePowerup && state.activePowerup.type === 'freeze');
+
+  // Wave logic - pause spawning during freeze
+  if (state.waveAnnounceTimer > 0 && !frozen) {
     state.waveAnnounceTimer--;
     if (state.waveAnnounceTimer <= 0) state.waveActive = true;
     return;
   }
 
-  if (state.waveActive) {
+  if (state.waveActive && !frozen) {
     state.waveSpawnTimer++;
     const spawnRate = isMobile ? Math.max(30, 90 - state.wave * 10) : Math.max(40, 120 - state.wave * 10);
     if (state.waveSpawnTimer >= spawnRate) {
@@ -182,8 +184,6 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       state.bullets.splice(i, 1);
     }
   }
-
-  const frozen: boolean = !!(state.activePowerup && state.activePowerup.type === 'freeze');
 
   // Update helicopters
   for (let i = state.helicopters.length - 1; i >= 0; i--) {
@@ -294,67 +294,70 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   for (let i = state.paratroopers.length - 1; i >= 0; i--) {
     const p = state.paratroopers[i];
     if (p.landed) continue;
-    if (frozen && !p.falling) continue;
-    if (!p.falling) { p.chuteTimer--; if (p.chuteTimer <= 0) p.chuteOpen = true; }
+    const paraFrozen = frozen && !p.falling;
+    if (!paraFrozen && !p.falling) { p.chuteTimer--; if (p.chuteTimer <= 0) p.chuteOpen = true; }
 
-    if (p.falling) {
-      p.vy += S('game','gravity') * 2;
-      p.x += p.vx; p.y += p.vy;
-      for (let k = state.paratroopers.length - 1; k >= 0; k--) {
-        if (k === i) continue;
-        const other = state.paratroopers[k];
-        if (Math.abs(p.x - other.x) < 12 && Math.abs(p.y - other.y) < 18) {
-          addExplosion(state, p.x, p.y, 15);
-          addExplosion(state, other.x, other.y, 12);
-          if (other.landed) {
-            if (other.x < gun.x) state.landedLeft = Math.max(0, state.landedLeft - 1);
-            else state.landedRight = Math.max(0, state.landedRight - 1);
+    // Movement - skip when frozen (but falling troopers still fall)
+    if (!paraFrozen) {
+      if (p.falling) {
+        p.vy += S('game','gravity') * 2;
+        p.x += p.vx; p.y += p.vy;
+        for (let k = state.paratroopers.length - 1; k >= 0; k--) {
+          if (k === i) continue;
+          const other = state.paratroopers[k];
+          if (Math.abs(p.x - other.x) < 12 && Math.abs(p.y - other.y) < 18) {
+            addExplosion(state, p.x, p.y, 15);
+            addExplosion(state, other.x, other.y, 12);
+            if (other.landed) {
+              if (other.x < gun.x) state.landedLeft = Math.max(0, state.landedLeft - 1);
+              else state.landedRight = Math.max(0, state.landedRight - 1);
+            }
+            const hi = Math.max(i, k), lo = Math.min(i, k);
+            state.paratroopers.splice(hi, 1);
+            state.paratroopers.splice(lo, 1);
+            addKill(state, 15, p.x, p.y);
+            i = -1; break;
           }
-          const hi = Math.max(i, k), lo = Math.min(i, k);
-          state.paratroopers.splice(hi, 1);
-          state.paratroopers.splice(lo, 1);
-          addKill(state, 15, p.x, p.y);
-          i = -1; break;
         }
-      }
-      if (i === -1) continue;
-      if (p.y >= canvas.height - 15) {
-        addExplosion(state, p.x, canvas.height - 15, 10);
-        state.paratroopers.splice(i, 1);
-        state.score += 10;
-        continue;
-      }
-    } else if (p.chuteOpen) {
-      p.vy = S('paratrooper','fallSpeed');
-      if (p.landingX == null) {
-        const side = p.x < gun.x ? -1 : 1;
-        const margin = 30;
-        const minX = side < 0 ? margin : gun.x + 40;
-        const maxX = side < 0 ? gun.x - 40 : canvas.width - margin;
-        p.landingX = minX + Math.random() * (maxX - minX);
-      }
-      const remainingY = (canvas.height - 15) - p.y;
-      const framesLeft = remainingY / S('paratrooper','fallSpeed');
-      if (framesLeft > 0) {
-        p.vx = Math.max(-S('paratrooper','maxDrift'), Math.min(S('paratrooper','maxDrift'), (p.landingX - p.x) / framesLeft));
-      }
-      p.x += p.vx; p.y += p.vy;
-      if (p.y >= canvas.height - 15) {
-        p.landed = true; p.y = canvas.height - 15;
-        if (p.x < gun.x) state.landedLeft++;
-        else state.landedRight++;
-        if (S('game', 'godMode') < 1 && (state.landedLeft >= S('paratrooper','maxLanded') || state.landedRight >= S('paratrooper','maxLanded'))) {
-          startEndSequence(state, gun);
+        if (i === -1) continue;
+        if (p.y >= canvas.height - 15) {
+          addExplosion(state, p.x, canvas.height - 15, 10);
+          state.paratroopers.splice(i, 1);
+          state.score += 10;
+          continue;
         }
-      }
-    } else {
-      p.vy += S('game','gravity');
-      p.x += p.vx; p.y += p.vy;
-      if (p.y >= canvas.height - 15) {
-        addExplosion(state, p.x, canvas.height - 15, 10);
-        state.paratroopers.splice(i, 1);
-        state.score += 10;
-        continue;
+      } else if (p.chuteOpen) {
+        p.vy = S('paratrooper','fallSpeed');
+        if (p.landingX == null) {
+          const side = p.x < gun.x ? -1 : 1;
+          const margin = 30;
+          const minX = side < 0 ? margin : gun.x + 40;
+          const maxX = side < 0 ? gun.x - 40 : canvas.width - margin;
+          p.landingX = minX + Math.random() * (maxX - minX);
+        }
+        const remainingY = (canvas.height - 15) - p.y;
+        const framesLeft = remainingY / S('paratrooper','fallSpeed');
+        if (framesLeft > 0) {
+          p.vx = Math.max(-S('paratrooper','maxDrift'), Math.min(S('paratrooper','maxDrift'), (p.landingX - p.x) / framesLeft));
+        }
+        p.x += p.vx; p.y += p.vy;
+        if (p.y >= canvas.height - 15) {
+          p.landed = true; p.y = canvas.height - 15;
+          if (p.x < gun.x) state.landedLeft++;
+          else state.landedRight++;
+          if (S('game', 'godMode') < 1 && (state.landedLeft >= S('paratrooper','maxLanded') || state.landedRight >= S('paratrooper','maxLanded'))) {
+            startEndSequence(state, gun);
+          }
+        }
+      } else {
+        p.vy += S('game','gravity');
+        p.x += p.vx; p.y += p.vy;
+        if (p.y >= canvas.height - 15) {
+          addExplosion(state, p.x, canvas.height - 15, 10);
+          state.paratroopers.splice(i, 1);
+          state.score += 10;
+          continue;
+        }
       }
     }
 
