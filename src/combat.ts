@@ -5,6 +5,24 @@ export function addExplosion(state: GameState, x: number, y: number, size: numbe
   state.explosions.push({ x, y, size, life: 1 });
 }
 
+const DEBRIS_COLORS = ['#888', '#666', '#aaa', '#555', '#999', '#774', '#997'];
+
+export function spawnDebris(state: GameState, x: number, y: number, count: number, colors?: string[]): void {
+  const palette = colors ?? DEBRIS_COLORS;
+  for (let i = 0; i < count; i++) {
+    state.debris.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: -Math.random() * 3 - 1,
+      size: 1 + Math.random() * 3,
+      color: palette[Math.floor(Math.random() * palette.length)]!,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.3,
+    });
+  }
+}
+
 export function addFloatingText(state: GameState, text: string, x: number, y: number, color: string): void {
   state.floatingTexts.push({ text, x, y, life: 1, color });
 }

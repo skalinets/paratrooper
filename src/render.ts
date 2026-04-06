@@ -640,6 +640,16 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.fill();
   }
 
+  // Debris
+  for (const d of state.debris) {
+    ctx.save();
+    ctx.translate(d.x, d.y);
+    ctx.rotate(d.rotation);
+    ctx.fillStyle = d.color;
+    ctx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size);
+    ctx.restore();
+  }
+
   // Floating texts
   for (const ft of state.floatingTexts) {
     ctx.globalAlpha = ft.life;

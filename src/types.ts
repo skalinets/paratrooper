@@ -104,6 +104,17 @@ export interface Bomb {
   chuteOpen: boolean;
 }
 
+export interface Debris {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  rotation: number;
+  rotSpeed: number;
+}
+
 export interface Explosion {
   x: number;
   y: number;
@@ -168,6 +179,7 @@ export interface GameState {
   jets: Jet[];
   bombs: Bomb[];
   explosions: Explosion[];
+  debris: Debris[];
   floatingTexts: FloatingText[];
   landedLeft: number;
   landedRight: number;
