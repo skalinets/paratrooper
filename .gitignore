@@ -3,3 +3,7 @@ dist/
 .wrangler/
 .claude/
 .omc/
+__pycache__/
+*.pyc
+tb_logs/
+*.zip
