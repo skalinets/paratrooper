@@ -26,6 +26,72 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     if (d.y > canvas.height) state.debris.splice(i, 1);
   }
 
+  // Update missiles (homing)
+  for (let i = state.missiles.length - 1; i >= 0; i--) {
+    const m = state.missiles[i];
+    // Steer toward target
+    const dx = m.targetX - m.x;
+    const dy = m.targetY - m.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 1) {
+      const speed = 5;
+      m.vx += (dx / dist) * 0.5;
+      m.vy += (dy / dist) * 0.5;
+      const v = Math.hypot(m.vx, m.vy);
+      if (v > speed) { m.vx = (m.vx / v) * speed; m.vy = (m.vy / v) * speed; }
+    }
+    m.x += m.vx;
+    m.y += m.vy;
+    m.life--;
+    if (m.life <= 0 || m.x < -20 || m.x > canvas.width + 20 || m.y < -20) {
+      state.missiles.splice(i, 1);
+      continue;
+    }
+    // Check hit against all enemies
+    let hit = false;
+    for (let j = state.helicopters.length - 1; j >= 0; j--) {
+      const h = state.helicopters[j];
+      if (Math.hypot(m.x - h.x, m.y - h.y) < 25) {
+        addExplosion(state, h.x, h.y, 30);
+        addKill(state, 50, h.x, h.y);
+        spawnDebris(state, h.x, h.y, 24, ['#888','#adf','#777','#bbb','#ccc','#999']);
+        state.helicopters.splice(j, 1);
+        hit = true; break;
+      }
+    }
+    if (!hit) for (let j = state.jets.length - 1; j >= 0; j--) {
+      const jt = state.jets[j];
+      if (Math.hypot(m.x - jt.x, m.y - jt.y) < 20) {
+        addExplosion(state, jt.x, jt.y, 25);
+        addKill(state, 100, jt.x, jt.y);
+        spawnDebris(state, jt.x, jt.y, 20, ['#aa4444','#884444','#993333','#ddf','#aa4444']);
+        state.jets.splice(j, 1);
+        hit = true; break;
+      }
+    }
+    if (!hit) for (let j = state.paratroopers.length - 1; j >= 0; j--) {
+      const p = state.paratroopers[j];
+      if (!p.landed && Math.hypot(m.x - p.x, m.y - p.y) < 15) {
+        addExplosion(state, p.x, p.y, 15);
+        addKill(state, 25, p.x, p.y);
+        spawnDebris(state, p.x, p.y, 6, ['#4a4','#da8','#696','#585']);
+        state.paratroopers.splice(j, 1);
+        hit = true; break;
+      }
+    }
+    if (!hit) for (let j = state.bombs.length - 1; j >= 0; j--) {
+      const b = state.bombs[j];
+      if (Math.hypot(m.x - b.x, m.y - b.y) < 12) {
+        addExplosion(state, b.x, b.y, 20);
+        addKill(state, 75, b.x, b.y);
+        spawnDebris(state, b.x, b.y, 8, ['#555','#666','#f44','#f80']);
+        state.bombs.splice(j, 1);
+        hit = true; break;
+      }
+    }
+    if (hit) { addExplosion(state, m.x, m.y, 10); state.missiles.splice(i, 1); }
+  }
+
   // End sequence
   if (state.endSequence) {
     state.frame++;
@@ -94,6 +160,35 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   if (state.activePowerup) {
     state.activePowerup.timer--;
     if (state.activePowerup.timer <= 0) state.activePowerup = null;
+    // Missile auto-fire every 2 seconds
+    if (state.activePowerup && state.activePowerup.type === 'missile') {
+      state.missileTimer++;
+      if (state.missileTimer >= 120) {
+        state.missileTimer = 0;
+        // Find nearest airborne enemy
+        let nearX = 0, nearY = 0, nearDist = Infinity;
+        for (const h of state.helicopters) {
+          const d = Math.hypot(h.x - gun.x, h.y - gun.y);
+          if (d < nearDist) { nearDist = d; nearX = h.x; nearY = h.y; }
+        }
+        for (const j of state.jets) {
+          const d = Math.hypot(j.x - gun.x, j.y - gun.y);
+          if (d < nearDist) { nearDist = d; nearX = j.x; nearY = j.y; }
+        }
+        for (const p of state.paratroopers) {
+          if (p.landed) continue;
+          const d = Math.hypot(p.x - gun.x, p.y - gun.y);
+          if (d < nearDist) { nearDist = d; nearX = p.x; nearY = p.y; }
+        }
+        for (const bm of state.bombs) {
+          const d = Math.hypot(bm.x - gun.x, bm.y - gun.y);
+          if (d < nearDist) { nearDist = d; nearX = bm.x; nearY = bm.y; }
+        }
+        if (nearDist < Infinity) {
+          state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: nearX, targetY: nearY, life: 300 });
+        }
+      }
+    }
   }
 
   // Spawn power-up crates
@@ -234,7 +329,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     if (!frozen) { j.x += j.dir * j.speed; }
     if (!frozen && !j.dropped && Math.abs(j.x - gun.x) < 120) {
       j.dropped = true;
-      state.bombs.push({ x: j.x, y: j.y + 10, vy: S('bomb','fallSpeed'), chuteOpen: true });
+      state.bombs.push({ x: j.x, y: j.y + 10, vy: S('bomb','fallSpeed'), chuteOpen: true, wobbleAmp: 0.2 + Math.random() * 0.4, wobbleFreq: 0.015 + Math.random() * 0.02, wobblePhase: Math.random() * Math.PI * 2 });
     }
     if ((j.dir > 0 && j.x > canvas.width + 100) || (j.dir < 0 && j.x < -100)) {
       state.jets.splice(i, 1); continue;
@@ -265,7 +360,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (framesLeft > 0) {
         b.vx = Math.max(-S('bomb','maxDrift'), Math.min(S('bomb','maxDrift'), dx / framesLeft));
       }
-      b.x += (b.vx || 0);
+      b.x += (b.vx || 0) + Math.sin(state.frame * (b.wobbleFreq ?? 0.02) + (b.wobblePhase ?? 0)) * (b.wobbleAmp ?? 0);
       b.y += b.vy;
     }
     if (b.y >= gun.y - 10 && Math.abs(b.x - gun.x) < 30) {
@@ -353,7 +448,8 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         if (framesLeft > 0) {
           p.vx = Math.max(-S('paratrooper','maxDrift'), Math.min(S('paratrooper','maxDrift'), (p.landingX - p.x) / framesLeft));
         }
-        p.x += p.vx; p.y += p.vy;
+        p.x += p.vx + Math.sin(state.frame * (p.wobbleFreq ?? 0.025) + (p.wobblePhase ?? 0)) * (p.wobbleAmp ?? 0);
+        p.y += p.vy;
         if (p.y >= canvas.height - 15) {
           p.landed = true; p.y = canvas.height - 15;
           if (p.x < gun.x) state.landedLeft++;
@@ -374,17 +470,22 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       }
     }
 
-    if (!p.landed && !p.falling) {
+    if (!p.landed) {
       for (let j = state.bullets.length - 1; j >= 0; j--) {
         const b = state.bullets[j];
-        const hitRadius = p.chuteOpen ? (isMobile ? 12 : 18) : (isMobile ? 5 : 8);
-        if (Math.abs(b.x - p.x) < hitRadius && Math.abs(b.y - p.y) < hitRadius) {
+        // Chute: wider hitbox covering canopy area; falling/no-chute: body hitbox
+        const hitX = p.chuteOpen ? (isMobile ? 14 : 20) : (isMobile ? 6 : 10);
+        const hitY = p.chuteOpen ? (isMobile ? 20 : 28) : (isMobile ? 8 : 12);
+        const centerY = p.chuteOpen ? p.y - 10 : p.y; // chute hitbox centered higher
+        if (Math.abs(b.x - p.x) < hitX && Math.abs(b.y - centerY) < hitY) {
           state.bullets.splice(j, 1);
           if (p.chuteOpen) {
+            // Shot the chute - trooper falls
             p.chuteOpen = false; p.falling = true; p.vy = 0.5; p.vx = 0; p.landingX = null;
             addKill(state, 25, p.x, p.y - 15);
             spawnDebris(state, p.x, p.y - 15, 7, ['#e44','#fff','#aaa','#f66']);
           } else {
+            // Direct hit - trooper killed (works for falling troopers too)
             addExplosion(state, p.x, p.y, 15);
             state.paratroopers.splice(i, 1);
             addKill(state, 25, p.x, p.y);

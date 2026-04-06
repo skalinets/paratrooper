@@ -10,7 +10,7 @@ const ctx = canvas.getContext('2d')!;
 
 function resize(): void {
   if (isMobile) {
-    const controlH = 120;
+    const controlH = 130; // controls height + padding
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - controlH;
   } else {

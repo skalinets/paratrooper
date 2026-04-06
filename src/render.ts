@@ -245,6 +245,7 @@ function drawBomb(ctx: CanvasRenderingContext2D, b: Bomb): void {
 function drawParatrooper(ctx: CanvasRenderingContext2D, p: Paratrooper, frame: number): void {
   ctx.save();
   ctx.translate(p.x, p.y);
+  ctx.scale(0.5, 0.5);
 
   // Flip if walking toward left
   if (p.landed && p.vx < 0) {
@@ -638,6 +639,77 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.arc(e.x, e.y, r * 0.5, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(255,255,${Math.floor(100 * alpha)},${alpha})`;
     ctx.fill();
+  }
+
+  // Laser aim line (when laser powerup active)
+  if (state.activePowerup && state.activePowerup.type === 'laser') {
+    let nearX = 0, nearY = 0, nearDist = Infinity;
+    for (const h of state.helicopters) {
+      const d = Math.hypot(h.x - gun.x, h.y - gun.y);
+      if (d < nearDist) { nearDist = d; nearX = h.x; nearY = h.y; }
+    }
+    for (const j of state.jets) {
+      const d = Math.hypot(j.x - gun.x, j.y - gun.y);
+      if (d < nearDist) { nearDist = d; nearX = j.x; nearY = j.y; }
+    }
+    for (const p of state.paratroopers) {
+      if (p.landed) continue;
+      const d = Math.hypot(p.x - gun.x, p.y - gun.y);
+      if (d < nearDist) { nearDist = d; nearX = p.x; nearY = p.y; }
+    }
+    for (const bm of state.bombs) {
+      const d = Math.hypot(bm.x - gun.x, bm.y - gun.y);
+      if (d < nearDist) { nearDist = d; nearX = bm.x; nearY = bm.y; }
+    }
+    if (nearDist < Infinity) {
+      // Pulsing red laser line
+      const pulse = 0.4 + Math.sin(state.frame * 0.15) * 0.2;
+      ctx.strokeStyle = `rgba(255, 30, 30, ${pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(gun.x, gun.y - 10);
+      ctx.lineTo(nearX, nearY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Target reticle
+      ctx.strokeStyle = `rgba(255, 50, 50, ${pulse + 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(nearX, nearY, 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(nearX - 14, nearY); ctx.lineTo(nearX - 6, nearY);
+      ctx.moveTo(nearX + 6, nearY); ctx.lineTo(nearX + 14, nearY);
+      ctx.moveTo(nearX, nearY - 14); ctx.lineTo(nearX, nearY - 6);
+      ctx.moveTo(nearX, nearY + 6); ctx.lineTo(nearX, nearY + 14);
+      ctx.stroke();
+    }
+  }
+
+  // Missiles
+  for (const m of state.missiles) {
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    const angle = Math.atan2(m.vy, m.vx);
+    ctx.rotate(angle + Math.PI / 2);
+    // Trail
+    ctx.fillStyle = 'rgba(255, 160, 0, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(-2, 4); ctx.lineTo(0, 12 + Math.random() * 4); ctx.lineTo(2, 4);
+    ctx.fill();
+    // Body
+    ctx.fillStyle = '#fa0';
+    ctx.beginPath();
+    ctx.moveTo(0, -6); ctx.lineTo(-3, 4); ctx.lineTo(3, 4);
+    ctx.closePath();
+    ctx.fill();
+    // Nose
+    ctx.fillStyle = '#f44';
+    ctx.beginPath();
+    ctx.arc(0, -5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   // Debris (bars)

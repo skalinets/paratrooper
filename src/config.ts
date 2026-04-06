@@ -58,6 +58,8 @@ export const POWERUP_TYPES: readonly PowerUpDef[] = [
   { type: 'rapid', label: 'RAPID FIRE', color: '#4f4', symbol: 'R' },
   { type: 'freeze', label: 'FREEZE', color: '#aef', symbol: 'F' },
   { type: 'nuke', label: 'NUKE!', color: '#f4f', symbol: 'N' },
+  { type: 'laser', label: 'LASER AIM', color: '#f22', symbol: 'L' },
+  { type: 'missile', label: 'MISSILES', color: '#fa0', symbol: 'M' },
 ] as const;
 
 /** Dump current config values to console as pasteable JSON */

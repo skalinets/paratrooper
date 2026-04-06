@@ -94,6 +94,9 @@ export interface Paratrooper {
   walkFrame?: number;
   targetX?: number;
   arrived?: boolean;
+  wobbleAmp?: number;
+  wobbleFreq?: number;
+  wobblePhase?: number;
 }
 
 export interface Bomb {
@@ -102,6 +105,9 @@ export interface Bomb {
   vy: number;
   vx?: number;
   chuteOpen: boolean;
+  wobbleAmp?: number;
+  wobbleFreq?: number;
+  wobblePhase?: number;
 }
 
 export interface Debris {
@@ -137,7 +143,17 @@ export interface PowerUpDef {
   symbol: string;
 }
 
-export type PowerUpType = 'triple' | 'explosive' | 'rapid' | 'freeze' | 'nuke';
+export type PowerUpType = 'triple' | 'explosive' | 'rapid' | 'freeze' | 'nuke' | 'laser' | 'missile';
+
+export interface Missile {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  targetX: number;
+  targetY: number;
+  life: number;
+}
 
 export interface FallingPowerUp {
   x: number;
@@ -180,6 +196,8 @@ export interface GameState {
   bombs: Bomb[];
   explosions: Explosion[];
   debris: Debris[];
+  missiles: Missile[];
+  missileTimer: number;
   floatingTexts: FloatingText[];
   landedLeft: number;
   landedRight: number;
