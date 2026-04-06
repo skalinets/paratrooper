@@ -355,7 +355,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       addExplosion(state, gun.x, gun.y - 10, 50);
       addExplosion(state, gun.x - 12, gun.y, 30);
       addExplosion(state, gun.x + 12, gun.y, 30);
-      continue;
+      return; // Stop all processing immediately
     }
     if (b.y >= canvas.height - 10) {
       addExplosion(state, b.x, canvas.height - 10, 20);
@@ -438,6 +438,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
           else state.landedRight++;
           if (S('game', 'godMode') < 1 && (state.landedLeft >= S('paratrooper','maxLanded') || state.landedRight >= S('paratrooper','maxLanded'))) {
             startEndSequence(state, gun);
+            return; // Stop all processing immediately
           }
         }
       } else {
