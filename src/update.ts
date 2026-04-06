@@ -273,6 +273,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   // Update helicopters
   for (let i = state.helicopters.length - 1; i >= 0; i--) {
     const h = state.helicopters[i];
+    if (!h) continue;
     if (!frozen) {
       h.x += h.dir * h.speed;
       h.dropTimer--;
@@ -307,6 +308,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   // Update jets
   for (let i = state.jets.length - 1; i >= 0; i--) {
     const j = state.jets[i];
+    if (!j) continue;
     if (!frozen) { j.x += j.dir * j.speed; }
     if (!frozen && !j.dropped && Math.abs(j.x - gun.x) < 120) {
       j.dropped = true;
@@ -333,6 +335,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   // Update bombs
   for (let i = state.bombs.length - 1; i >= 0; i--) {
     const b = state.bombs[i];
+    if (!b) continue; // guard: array may have been replaced by explosiveBlast
     if (!frozen) {
       b.vy = S('bomb','fallSpeed');
       const dx = gun.x - b.x;
@@ -382,6 +385,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   // Update paratroopers
   for (let i = state.paratroopers.length - 1; i >= 0; i--) {
     const p = state.paratroopers[i];
+    if (!p) continue;
     if (p.landed) continue;
     const paraFrozen = frozen && !p.falling;
     if (!paraFrozen && !p.falling) { p.chuteTimer--; if (p.chuteTimer <= 0) p.chuteOpen = true; }
