@@ -146,24 +146,22 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     if (state.comboTimer <= 0) state.combo = 0;
   }
 
-  // Power-up timer
-  if (state.activePowerup) {
-    state.activePowerup.timer--;
-    if (state.activePowerup.timer <= 0) state.activePowerup = null;
-    // Missile auto-fire every 2 seconds
-    if (state.activePowerup && state.activePowerup.type === 'missile') {
-      state.missileTimer++;
-      if (state.missileTimer >= S('powerups', 'missileRate')) {
-        state.missileTimer = 0;
-        // Collect all airborne targets
-        const targets: { x: number; y: number }[] = [];
-        for (const h of state.helicopters) targets.push({ x: h.x, y: h.y });
-        for (const j of state.jets) targets.push({ x: j.x, y: j.y });
-        if (targets.length > 0) {
-          // Pick random target
-          const t = targets[Math.floor(Math.random() * targets.length)]!;
-          state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: t.x, targetY: t.y, life: 300 });
-        }
+  // Power-up timers (stacking)
+  for (const [type, timer] of state.activePowerups) {
+    const remaining = timer - 1;
+    if (remaining <= 0) { state.activePowerups.delete(type); } else { state.activePowerups.set(type, remaining); }
+  }
+  // Missile auto-fire every second
+  if (state.activePowerups.has('missile')) {
+    state.missileTimer++;
+    if (state.missileTimer >= S('powerups', 'missileRate')) {
+      state.missileTimer = 0;
+      const targets: { x: number; y: number }[] = [];
+      for (const h of state.helicopters) targets.push({ x: h.x, y: h.y });
+      for (const j of state.jets) targets.push({ x: j.x, y: j.y });
+      if (targets.length > 0) {
+        const t = targets[Math.floor(Math.random() * targets.length)]!;
+        state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: t.x, targetY: t.y, life: 300 });
       }
     }
   }
@@ -203,12 +201,13 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
           state.jets = [];
           state.bombs = [];
           addFloatingText(state, 'NUKE!', pu.x, pu.y, '#f4f');
-        } else if (pu.type === 'freeze') {
-          state.activePowerup = { type: 'freeze', timer: S('powerups', 'duration') };
-          addFloatingText(state, 'FREEZE!', pu.x, pu.y, '#aef');
         } else {
-          state.activePowerup = { type: pu.type, timer: S('powerups', 'duration') };
+          state.activePowerups.set(pu.type, S('powerups', 'duration'));
           addFloatingText(state, pu.label, pu.x, pu.y, pu.color);
+          // Fire missile immediately on pickup
+          if (pu.type === 'missile') {
+            state.missileTimer = S('powerups', 'missileRate');
+          }
         }
         state.powerups.splice(i, 1);
         break;
@@ -216,7 +215,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     }
   }
 
-  const frozen: boolean = !!(state.activePowerup && state.activePowerup.type === 'freeze');
+  const frozen: boolean = state.activePowerups.has('freeze');
 
   // Wave logic - pause spawning during freeze
   if (state.waveAnnounceTimer > 0 && !frozen) {
@@ -493,8 +492,10 @@ export function startWave(state: GameState): void {
   state.waveHelisSpawned = 0;
   state.waveJetsSpawned = 0;
   state.waveSpawnTimer = 0;
-  // Night rounds every other wave starting from wave 3
-  state.nightMode = state.wave >= 3 && state.wave % 2 === 1;
+  // Night mode: respect settings overrides
+  if (S('game', 'nightOnly') >= 1) { state.nightMode = true; }
+  else if (S('game', 'dayOnly') >= 1) { state.nightMode = false; }
+  else { state.nightMode = state.wave >= 3 && state.wave % 2 === 1; }
 }
 
 export function startEndSequence(state: GameState, gun: Gun): void {

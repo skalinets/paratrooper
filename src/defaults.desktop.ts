@@ -32,10 +32,13 @@ export const desktopDefaults: ConfigValues = {
     comboWindow: 45,
     powerupInterval: 600,
     godMode: 0,
+    nightOnly: 0,
+    dayOnly: 0,
+    spotlightWidth: 0.14,
   },
   powerups: {
     duration: 720,
-    missileRate: 120,
+    missileRate: 60,
     missileSpeed: 6,
   },
 };

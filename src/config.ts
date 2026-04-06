@@ -40,6 +40,9 @@ export const settings: Settings = {
     comboWindow: { val: defaults.game!.comboWindow!, min: 10, max: 120, step: 5, label: 'Combo Window (frames)' },
     powerupInterval: { val: defaults.game!.powerupInterval!, min: 200, max: 1500, step: 50, label: 'Powerup Interval' },
     godMode: { val: defaults.game!.godMode!, min: 0, max: 1, step: 1, label: 'God Mode' },
+    nightOnly: { val: defaults.game!.nightOnly!, min: 0, max: 1, step: 1, label: 'Night Only' },
+    dayOnly: { val: defaults.game!.dayOnly!, min: 0, max: 1, step: 1, label: 'Day Only' },
+    spotlightWidth: { val: defaults.game!.spotlightWidth!, min: 0.05, max: 0.5, step: 0.01, label: 'Spotlight Width' },
   },
   powerups: {
     duration: { val: defaults.powerups!.duration!, min: 120, max: 1200, step: 60, label: 'Duration (frames)' },

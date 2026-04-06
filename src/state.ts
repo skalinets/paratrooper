@@ -1,4 +1,4 @@
-import type { GameState, Bullet, Helicopter, Paratrooper, Jet, Bomb, Explosion, Debris, Missile, FloatingText, FallingPowerUp, ActivePowerUp } from './types';
+import type { GameState, Bullet, Helicopter, Paratrooper, Jet, Bomb, Explosion, Debris, Missile, FloatingText, FallingPowerUp, PowerUpType } from './types';
 
 export function createState(): GameState {
   return {
@@ -44,7 +44,7 @@ export function createState(): GameState {
     comboTimer: 0,
     // Power-up system
     powerups: [] as FallingPowerUp[],
-    activePowerup: null as ActivePowerUp | null,
+    activePowerups: new Map<PowerUpType, number>(),
     powerupSpawnTimer: 0,
     // Input
     fireTimer: 0,

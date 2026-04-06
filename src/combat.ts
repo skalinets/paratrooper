@@ -82,9 +82,9 @@ export function shoot(state: GameState, gun: Gun): void {
   const spread = S('turret', 'bulletSpread') * Math.PI / 180;
   const bx = gun.x + Math.cos(state.gunAngle) * GUN_LENGTH;
   const by = gun.y + Math.sin(state.gunAngle) * GUN_LENGTH;
-  const isExplosive = !!(state.activePowerup && state.activePowerup.type === 'explosive');
+  const isExplosive = state.activePowerups.has('explosive');
 
-  if (state.activePowerup && state.activePowerup.type === 'triple') {
+  if (state.activePowerups.has('triple')) {
     for (let s = -1; s <= 1; s++) {
       const a = state.gunAngle + s * 0.12 + (Math.random() - 0.5) * spread;
       state.bullets.push({ x: bx, y: by, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, explosive: isExplosive });
@@ -94,7 +94,7 @@ export function shoot(state: GameState, gun: Gun): void {
     state.bullets.push({ x: bx, y: by, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, explosive: isExplosive });
   }
 
-  const heatCost = (state.activePowerup && state.activePowerup.type === 'rapid') ? 2 : S('turret', 'heatPerShot');
+  const heatCost = state.activePowerups.has('rapid') ? 2 : S('turret', 'heatPerShot');
   state.heat = Math.min(MAX_HEAT, state.heat + heatCost);
   if (state.heat >= MAX_HEAT) {
     state.overheated = true;

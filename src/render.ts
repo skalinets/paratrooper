@@ -424,6 +424,12 @@ function drawSettingsMenu(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEleme
       }
       lineY += lineH;
     });
+    // Keyboard shortcuts
+    lineY += 10;
+    ctx.fillStyle = '#556';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Shortcuts: Space=Fire  \u2190\u2192=Aim  S=Settings  D=Dump Config', canvas.width / 2, lineY);
   } else {
     // Drilled into a category: show params
     const cat = settingsCategories[state.settingsCategory] as SettingsCategory;
@@ -645,7 +651,7 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
   }
 
   // Laser sight - shows turret aim direction
-  if (state.activePowerup && state.activePowerup.type === 'laser') {
+  if (state.activePowerups.has('laser')) {
     const laserLen = Math.max(W, H);
     const endX = gun.x + Math.cos(state.gunAngle) * laserLen;
     const endY = (gun.y - 8) + Math.sin(state.gunAngle) * laserLen;
@@ -749,7 +755,7 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     nctx.globalCompositeOperation = 'destination-out';
     const spotAngle = state.gunAngle;
     const spotLen = Math.max(W, H) * 1.2;
-    const spotWidth = 0.28;
+    const spotWidth = S('game', 'spotlightWidth');
     const gx = gun.x, gy = gun.y - 8;
     nctx.beginPath();
     nctx.moveTo(gx, gy);
@@ -812,38 +818,30 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.fillText(`x${state.combo} COMBO`, W - 10, 22);
   }
 
-  // Active power-up indicator
-  if (state.activePowerup) {
-    const activePowerup = state.activePowerup;
-    const pt = POWERUP_TYPES.find(t => t.type === activePowerup.type);
-    if (pt) {
-      const timeLeft = activePowerup.timer / S('powerups', 'duration');
+  // Active power-up indicators (stacked)
+  if (state.activePowerups.size > 0) {
+    let idx = 0;
+    const duration = S('powerups', 'duration');
+    for (const [type, timer] of state.activePowerups) {
+      const pt = POWERUP_TYPES.find(t => t.type === type);
+      if (!pt) continue;
+      const timeLeft = timer / duration;
       const expiring = timeLeft < 0.25;
       const visible = !expiring || state.frame % 20 < 14;
-
       if (visible) {
-        const barW = 120;
+        const barW = 80;
         const barX = W / 2 - barW / 2;
-        const barY = 58;
-
+        const barY = 50 + idx * 16;
         ctx.fillStyle = pt.color;
-        ctx.font = 'bold 11px monospace';
+        ctx.font = 'bold 10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(pt.label, W / 2, barY - 2);
-
-        // Timer bar background
+        ctx.fillText(pt.label, W / 2, barY);
         ctx.fillStyle = '#333';
-        ctx.fillRect(barX, barY + 2, barW, 6);
-
-        // Timer bar fill
+        ctx.fillRect(barX, barY + 2, barW, 4);
         ctx.fillStyle = pt.color;
-        ctx.fillRect(barX, barY + 2, barW * timeLeft, 6);
-
-        // Bar border
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(barX, barY + 2, barW, 6);
+        ctx.fillRect(barX, barY + 2, barW * timeLeft, 4);
       }
+      idx++;
     }
   }
 

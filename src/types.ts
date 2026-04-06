@@ -38,6 +38,9 @@ export interface Settings {
     comboWindow: SettingParam;
     powerupInterval: SettingParam;
     godMode: SettingParam;
+    nightOnly: SettingParam;
+    dayOnly: SettingParam;
+    spotlightWidth: SettingParam;
   };
   powerups: {
     duration: SettingParam;
@@ -232,7 +235,7 @@ export interface GameState {
   comboTimer: number;
   // Power-up system
   powerups: FallingPowerUp[];
-  activePowerup: ActivePowerUp | null;
+  activePowerups: Map<PowerUpType, number>;
   powerupSpawnTimer: number;
   // Input
   fireTimer: number;
