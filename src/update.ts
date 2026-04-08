@@ -184,9 +184,10 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     }
   }
 
-  // Spawn power-up crates
+  // Spawn power-up crates - only during early phase of active wave
   state.powerupSpawnTimer++;
-  if (state.powerupSpawnTimer >= S('game','powerupInterval') + Math.random() * 300) {
+  const earlyPhase = state.waveActive && state.waveHelisSpawned < Math.ceil(state.waveHeliCount / 2);
+  if (earlyPhase && state.powerupSpawnTimer >= S('game','powerupInterval') + Math.random() * 300) {
     state.powerupSpawnTimer = 0;
     const pt = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
     state.powerups.push({
@@ -239,10 +240,8 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
   if (state.waveAnnounceTimer > 0 && !frozen) {
     state.waveAnnounceTimer--;
     if (state.waveAnnounceTimer <= 0) state.waveActive = true;
-    return;
-  }
-
-  if (state.waveActive && !frozen) {
+    // don't return - let bullets and other entities still update
+  } else if (state.waveActive && !frozen) {
     state.waveSpawnTimer++;
     const spawnRate = isMobile ? Math.max(30, 90 - state.wave * 10) : Math.max(40, 120 - state.wave * 10);
     if (state.waveSpawnTimer >= spawnRate) {
@@ -262,10 +261,9 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         state.waveJetsSpawned++;
       }
     }
+    // End wave when all helis and jets gone (don't wait for paratroopers/bombs)
     if (state.waveHelisSpawned >= state.waveHeliCount && state.waveJetsSpawned >= state.waveJetCount
-        && state.helicopters.length === 0 && state.jets.length === 0
-        && state.paratroopers.every(p => p.landed || p.falling)
-        && state.bombs.length === 0) {
+        && state.helicopters.length === 0 && state.jets.length === 0) {
       state.wavePause = 120;
       state.waveActive = false;
     }
@@ -515,6 +513,8 @@ export function startWave(state: GameState): void {
   state.waveHelisSpawned = 0;
   state.waveJetsSpawned = 0;
   state.waveSpawnTimer = 0;
+  // Powerups should spawn near the start of each wave
+  state.powerupSpawnTimer = S('game','powerupInterval') - 60;
   // Night mode: respect settings overrides
   if (S('game', 'nightOnly') >= 1) { state.nightMode = true; }
   else if (S('game', 'dayOnly') >= 1) { state.nightMode = false; }
