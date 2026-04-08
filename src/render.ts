@@ -909,6 +909,41 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     nctx.globalCompositeOperation = 'source-over';
     // Draw mask onto main canvas
     ctx.drawImage(nightCanvas, 0, 0);
+
+    // Whitish spotlight beam tint (additive)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.arc(gx, gy, spotLen, spotAngle - spotWidth, spotAngle + spotWidth);
+    ctx.closePath();
+    const beamGrad = ctx.createRadialGradient(gx, gy, 10, gx, gy, spotLen);
+    beamGrad.addColorStop(0, 'rgba(220, 230, 255, 0.22)');
+    beamGrad.addColorStop(0.5, 'rgba(200, 220, 255, 0.12)');
+    beamGrad.addColorStop(1, 'rgba(180, 200, 255, 0)');
+    ctx.fillStyle = beamGrad;
+    ctx.fill();
+    ctx.restore();
+
+    // Draw lit building windows on top so they're always visible
+    const groundY = H - 30;
+    const buildingSeedNight = [0.1, 0.25, 0.35, 0.45, 0.55, 0.62, 0.72, 0.8, 0.9];
+    const buildingHNight = [60, 90, 45, 110, 70, 55, 85, 65, 50];
+    const buildingWNight = [30, 22, 35, 18, 28, 40, 20, 32, 25];
+    for (let i = 0; i < buildingSeedNight.length; i++) {
+      const bx = buildingSeedNight[i]! * W;
+      const bh = buildingHNight[i]!;
+      const bw = buildingWNight[i]!;
+      for (let wy = groundY - bh + 8; wy < groundY - 5; wy += 12) {
+        for (let wx = bx - bw / 2 + 4; wx < bx + bw / 2 - 4; wx += 8) {
+          const winOn = ((wx * 7 + wy * 13 + i * 31) % 10) > 3;
+          if (winOn) {
+            ctx.fillStyle = 'rgba(255,220,100,0.85)';
+            ctx.fillRect(wx, wy, 4, 5);
+          }
+        }
+      }
+    }
   }
 
   // HUD: score
