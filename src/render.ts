@@ -46,15 +46,32 @@ function drawHeatWarning(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElemen
   }
 }
 
-function heatColor(state: GameState, cool: string, warm: string, hot: string, glow: string): string {
+function lerp(a: number, b: number, t: number): number { return a + (b - a) * t; }
+function lerpColor(c1: [number, number, number], c2: [number, number, number], t: number): string {
+  const r = Math.round(lerp(c1[0], c2[0], t));
+  const g = Math.round(lerp(c1[1], c2[1], t));
+  const b = Math.round(lerp(c1[2], c2[2], t));
+  return `rgb(${r},${g},${b})`;
+}
+
+// Heat color palette stops (r,g,b)
+const HEAT_COOL: [number, number, number] = [153, 153, 187]; // #99b
+const HEAT_WARM: [number, number, number] = [255, 204, 68];  // #fc4
+const HEAT_HOT: [number, number, number] = [255, 136, 34];   // #f82
+const HEAT_GLOW: [number, number, number] = [255, 68, 0];    // #f40
+
+function heatGradient(state: GameState, shift: number = 0): string {
   if (state.overheated) {
-    return state.frame % 8 < 4 ? '#f00' : '#f66';
+    return state.frame % 8 < 4 ? '#ff0000' : '#ff5555';
   }
-  const ratio = state.heat / MAX_HEAT;
-  if (ratio > 0.85) return glow;
-  if (ratio > 0.65) return hot;
-  if (ratio > 0.4) return warm;
-  return cool;
+  const ratio = Math.min(1, Math.max(0, state.heat / MAX_HEAT + shift));
+  if (ratio < 0.5) {
+    return lerpColor(HEAT_COOL, HEAT_WARM, ratio / 0.5);
+  } else if (ratio < 0.8) {
+    return lerpColor(HEAT_WARM, HEAT_HOT, (ratio - 0.5) / 0.3);
+  } else {
+    return lerpColor(HEAT_HOT, HEAT_GLOW, (ratio - 0.8) / 0.2);
+  }
 }
 
 function drawGun(ctx: CanvasRenderingContext2D, state: GameState, gun: Gun): void {
@@ -68,21 +85,20 @@ function drawGun(ctx: CanvasRenderingContext2D, state: GameState, gun: Gun): voi
   ctx.lineWidth = 1;
   ctx.strokeRect(gx - gun.baseWidth / 2, gy, gun.baseWidth, gun.baseHeight);
 
-  // Turret dome - color shifts with heat
-  const domeColor = heatColor(state, '#99b', '#fc4', '#f82', '#f40');
-  ctx.fillStyle = domeColor;
+  // Turret dome - smooth heat gradient
+  ctx.fillStyle = heatGradient(state);
   ctx.beginPath();
   ctx.arc(gx, gy, 18, Math.PI, 0);
   ctx.fill();
-  ctx.strokeStyle = heatColor(state, '#bbd', '#fd6', '#fa4', '#f60');
+  ctx.strokeStyle = heatGradient(state, 0.1);
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(gx, gy, 18, Math.PI, 0);
   ctx.stroke();
 
-  // Barrel - color shifts with heat
-  const barrelColor = heatColor(state, '#ccd', '#fd4', '#f82', '#f20');
-  const barrelEdge = heatColor(state, '#eef', '#fea', '#fa6', '#f60');
+  // Barrel - smooth heat gradient
+  const barrelColor = heatGradient(state);
+  const barrelEdge = heatGradient(state, 0.15);
 
   ctx.save();
   ctx.translate(gx, gy);

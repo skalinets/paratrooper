@@ -3,7 +3,7 @@ import type { ConfigValues } from './types';
 export const desktopDefaults: ConfigValues = {
   turret: {
     rotationSpeed: 0.03,
-    bulletSpeed: 8,
+    bulletSpeed: 5,
     bulletSpread: 5,
     fireRate: 8,
     heatPerShot: 8,
