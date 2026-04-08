@@ -16,6 +16,15 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     state.floatingTexts[i].y -= 0.8;
     if (state.floatingTexts[i].life <= 0) state.floatingTexts.splice(i, 1);
   }
+  // Update smoke puffs (grow and fade)
+  for (let i = state.smokePuffs.length - 1; i >= 0; i--) {
+    const s = state.smokePuffs[i];
+    if (!s) continue;
+    s.life -= 0.015;
+    s.size += 0.3;
+    if (s.life <= 0) state.smokePuffs.splice(i, 1);
+  }
+
   // Update debris (simple gravity, remove when below ground)
   for (let i = state.debris.length - 1; i >= 0; i--) {
     const d = state.debris[i];
@@ -53,6 +62,13 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     m.x += m.vx;
     m.y += m.vy;
     m.life--;
+    // Spawn smoke puff at current position (persists after missile moves)
+    state.smokePuffs.push({
+      x: m.x + (Math.random() - 0.5) * 3,
+      y: m.y + (Math.random() - 0.5) * 3,
+      size: 3 + Math.random() * 3,
+      life: 1,
+    });
     if (m.life <= 0 || m.x < -20 || m.x > canvas.width + 20 || m.y < -20) {
       state.missiles.splice(i, 1);
       continue;

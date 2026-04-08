@@ -118,6 +118,13 @@ export interface Bomb {
   wobblePhase?: number;
 }
 
+export interface SmokePuff {
+  x: number;
+  y: number;
+  size: number;
+  life: number;
+}
+
 export interface Debris {
   x: number;
   y: number;
@@ -206,6 +213,7 @@ export interface GameState {
   debris: Debris[];
   missiles: Missile[];
   missileTimer: number;
+  smokePuffs: SmokePuff[];
   floatingTexts: FloatingText[];
   landedLeft: number;
   landedRight: number;

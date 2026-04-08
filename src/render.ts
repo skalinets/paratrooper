@@ -795,22 +795,18 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.fill();
   }
 
-  // Missiles with smoke trail
+  // Persistent smoke puffs (from missiles) - drawn before missiles
+  for (const s of state.smokePuffs) {
+    const alpha = s.life * 0.5;
+    ctx.fillStyle = `rgba(200,200,200,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Missiles
   for (const m of state.missiles) {
-    // Smoke trail (multiple puffs behind missile)
     const angle = Math.atan2(m.vy, m.vx);
-    const trailDx = -Math.cos(angle);
-    const trailDy = -Math.sin(angle);
-    for (let t = 1; t <= 12; t++) {
-      const alpha = 0.35 - t * 0.025;
-      const size = 2.5 + t * 1.2;
-      const ox = (Math.random() - 0.5) * 3;
-      const oy = (Math.random() - 0.5) * 3;
-      ctx.fillStyle = `rgba(180,180,180,${alpha})`;
-      ctx.beginPath();
-      ctx.arc(m.x + trailDx * t * 6 + ox, m.y + trailDy * t * 6 + oy, size, 0, Math.PI * 2);
-      ctx.fill();
-    }
     // Missile body
     ctx.save();
     ctx.translate(m.x, m.y);

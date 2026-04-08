@@ -1,4 +1,4 @@
-import type { GameState, Bullet, Helicopter, Paratrooper, Jet, Bomb, Explosion, Debris, Missile, FloatingText, FallingPowerUp, PowerUpType } from './types';
+import type { GameState, Bullet, Helicopter, Paratrooper, Jet, Bomb, Explosion, Debris, Missile, SmokePuff, FloatingText, FallingPowerUp, PowerUpType } from './types';
 
 export function createState(): GameState {
   return {
@@ -15,6 +15,7 @@ export function createState(): GameState {
     debris: [] as Debris[],
     missiles: [] as Missile[],
     missileTimer: 0,
+    smokePuffs: [] as SmokePuff[],
     floatingTexts: [] as FloatingText[],
     landedLeft: 0,
     landedRight: 0,
