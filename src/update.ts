@@ -48,6 +48,12 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       const d = Math.hypot(j.x - m.x, j.y - m.y);
       if (d < bestDist) { bestDist = d; m.targetX = j.x; m.targetY = j.y; }
     }
+    // No targets available - self-destruct
+    if (bestDist === Infinity) {
+      addExplosion(state, m.x, m.y, 15);
+      state.missiles.splice(i, 1);
+      continue;
+    }
     // Strong homing - steer aggressively
     const dx = m.targetX - m.x;
     const dy = m.targetY - m.y;
@@ -167,18 +173,14 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     const remaining = timer - 1;
     if (remaining <= 0) { state.activePowerups.delete(type); } else { state.activePowerups.set(type, remaining); }
   }
-  // Missile auto-fire every second
-  if (state.activePowerups.has('missile')) {
-    state.missileTimer++;
-    if (state.missileTimer >= S('powerups', 'missileRate')) {
-      state.missileTimer = 0;
-      const targets: { x: number; y: number }[] = [];
-      for (const h of state.helicopters) targets.push({ x: h.x, y: h.y });
-      for (const j of state.jets) targets.push({ x: j.x, y: j.y });
-      if (targets.length > 0) {
-        const t = targets[Math.floor(Math.random() * targets.length)]!;
-        state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: t.x, targetY: t.y, life: 300 });
-      }
+  // Missile auto-fire: only when previous missile is gone
+  if (state.activePowerups.has('missile') && state.missiles.length === 0) {
+    const targets: { x: number; y: number }[] = [];
+    for (const h of state.helicopters) targets.push({ x: h.x, y: h.y });
+    for (const j of state.jets) targets.push({ x: j.x, y: j.y });
+    if (targets.length > 0) {
+      const t = targets[Math.floor(Math.random() * targets.length)]!;
+      state.missiles.push({ x: gun.x, y: gun.y - 10, vx: 0, vy: -3, targetX: t.x, targetY: t.y, life: 300 });
     }
   }
 
