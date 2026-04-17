@@ -11,20 +11,20 @@ export const desktopDefaults: ConfigValues = {
     overheatCooldown: 120,
   },
   helicopter: {
-    speed: 1.5,
-    waveSpeedBonus: 0.1,
+    speed: 1.3,
+    waveSpeedBonus: 0.08,
   },
   paratrooper: {
-    fallSpeed: 0.5,
+    fallSpeed: 0.45,
     maxDrift: 1.5,
     maxLanded: 4,
   },
   jet: {
-    speed: 4,
-    waveSpeedBonus: 0.3,
+    speed: 3.4,
+    waveSpeedBonus: 0.25,
   },
   bomb: {
-    fallSpeed: 0.8,
+    fallSpeed: 0.7,
     maxDrift: 1,
   },
   game: {

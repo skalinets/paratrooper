@@ -1020,7 +1020,7 @@ function draw(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: G
     ctx.fillStyle = '#4f4';
     ctx.font = 'bold 22px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(`WAVE ${state.wave - 1} COMPLETE`, W / 2, H / 2 + 8);
+    ctx.fillText(`WAVE ${state.wave} COMPLETE`, W / 2, H / 2 + 8);
   }
 
   // Danger warning (flashing when both sides near max)
