@@ -4,10 +4,9 @@ PROJECT = paratrooper
 BRANCH = main
 BUN = PATH="$$HOME/.bun/bin:$$PATH" bun
 
-# Build minified bundle
+# Build minified, hashed bundle
 build:
-	$(BUN) build src/main.ts --outdir dist --minify
-	cp src/index.html dist/index.html
+	$(BUN) run scripts/build.ts
 
 # Deploy dist/ to Cloudflare Pages
 deploy: build
@@ -28,10 +27,9 @@ typecheck:
 # Lint + typecheck + test
 check: lint typecheck test
 
-# Dev mode - build and open
+# Dev mode - unminified, no hash, open browser
 dev:
-	$(BUN) build src/main.ts --outdir dist
-	cp src/index.html dist/index.html
+	$(BUN) run scripts/build.ts --dev
 	open dist/index.html
 
 # Commit all changes
