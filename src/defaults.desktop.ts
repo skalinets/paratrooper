@@ -1,34 +1,34 @@
-import type { ConfigValues } from './types';
+import type { ConfigValues } from "./types";
 
 export const desktopDefaults: ConfigValues = {
   turret: {
-    rotationSpeed: 0.03,
-    bulletSpeed: 5,
-    bulletSpread: 5,
-    fireRate: 8,
-    heatPerShot: 8,
-    heatDecay: 0.4,
+    rotationSpeed: 0.015,
+    bulletSpeed: 2.5,
+    bulletSpread: 4.5,
+    fireRate: 14,
+    heatPerShot: 13,
+    heatDecay: 0.5,
     overheatCooldown: 120,
   },
   helicopter: {
-    speed: 1.3,
-    waveSpeedBonus: 0.08,
+    speed: 0.6,
+    waveSpeedBonus: 0.05,
   },
   paratrooper: {
-    fallSpeed: 0.45,
-    maxDrift: 1.5,
+    fallSpeed: 0.6,
+    maxDrift: 1.6,
     maxLanded: 4,
   },
   jet: {
-    speed: 3.4,
-    waveSpeedBonus: 0.25,
+    speed: 1,
+    waveSpeedBonus: 0.1,
   },
   bomb: {
-    fallSpeed: 0.7,
-    maxDrift: 1,
+    fallSpeed: 0.5,
+    maxDrift: 1.1,
   },
   game: {
-    gravity: 0.04,
+    gravity: 0.035,
     comboWindow: 45,
     powerupInterval: 600,
     godMode: 0,
