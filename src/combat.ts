@@ -1,13 +1,25 @@
-import { S, GUN_LENGTH, MAX_HEAT } from './config';
-import type { GameState, Gun } from './types';
+import { S, GUN_LENGTH, MAX_HEAT } from "./config";
+import type { GameState, Gun } from "./types";
 
-export function addExplosion(state: GameState, x: number, y: number, size: number): void {
+export function addExplosion(
+  state: GameState,
+  x: number,
+  y: number,
+  size: number,
+): void {
   state.explosions.push({ x, y, size, life: 1 });
 }
 
-const DEBRIS_COLORS = ['#888', '#666', '#aaa', '#555', '#999', '#774', '#997'];
+const DEBRIS_COLORS = ["#888", "#666", "#aaa", "#555", "#999", "#774", "#997"];
 
-export function spawnDebris(state: GameState, x: number, y: number, count: number, colors?: string[], scale: number = 1): void {
+export function spawnDebris(
+  state: GameState,
+  x: number,
+  y: number,
+  count: number,
+  colors?: string[],
+  scale: number = 1,
+): void {
   const palette = colors ?? DEBRIS_COLORS;
   for (let i = 0; i < count; i++) {
     state.debris.push({
@@ -23,20 +35,31 @@ export function spawnDebris(state: GameState, x: number, y: number, count: numbe
   }
 }
 
-export function addFloatingText(state: GameState, text: string, x: number, y: number, color: string): void {
+export function addFloatingText(
+  state: GameState,
+  text: string,
+  x: number,
+  y: number,
+  color: string,
+): void {
   state.floatingTexts.push({ text, x, y, life: 1, color });
 }
 
-export function addKill(state: GameState, points: number, x: number, y: number): void {
-  state.comboTimer = S('game', 'comboWindow');
+export function addKill(
+  state: GameState,
+  points: number,
+  x: number,
+  y: number,
+): void {
+  state.comboTimer = S("game", "comboWindow");
   state.combo++;
   const multiplier = Math.min(state.combo, 8);
   const total = points * multiplier;
   state.score += total;
   if (multiplier > 1) {
-    addFloatingText(state, `${total} x${multiplier}`, x, y, '#ff0');
+    addFloatingText(state, `${total} x${multiplier}`, x, y, "#ff0");
   } else {
-    addFloatingText(state, `+${total}`, x, y, '#fff');
+    addFloatingText(state, `+${total}`, x, y, "#fff");
   }
 }
 
@@ -44,7 +67,7 @@ export function explosiveBlast(state: GameState, x: number, y: number): void {
   const radius = 120;
   addExplosion(state, x, y, 40);
   // Use filter instead of splice to avoid corrupting outer loop indices
-  state.helicopters = state.helicopters.filter(h => {
+  state.helicopters = state.helicopters.filter((h) => {
     if (Math.hypot(h.x - x, h.y - y) < radius) {
       addExplosion(state, h.x, h.y, 25);
       addKill(state, 50, h.x, h.y);
@@ -52,7 +75,7 @@ export function explosiveBlast(state: GameState, x: number, y: number): void {
     }
     return true;
   });
-  state.jets = state.jets.filter(j => {
+  state.jets = state.jets.filter((j) => {
     if (Math.hypot(j.x - x, j.y - y) < radius) {
       addExplosion(state, j.x, j.y, 25);
       addKill(state, 100, j.x, j.y);
@@ -60,14 +83,14 @@ export function explosiveBlast(state: GameState, x: number, y: number): void {
     }
     return true;
   });
-  state.bombs = state.bombs.filter(b => {
+  state.bombs = state.bombs.filter((b) => {
     if (Math.hypot(b.x - x, b.y - y) < radius) {
       addExplosion(state, b.x, b.y, 15);
       return false;
     }
     return true;
   });
-  state.paratroopers = state.paratroopers.filter(p => {
+  state.paratroopers = state.paratroopers.filter((p) => {
     if (!p.landed && Math.hypot(p.x - x, p.y - y) < radius) {
       addExplosion(state, p.x, p.y, 12);
       addKill(state, 25, p.x, p.y);
@@ -79,26 +102,40 @@ export function explosiveBlast(state: GameState, x: number, y: number): void {
 
 export function shoot(state: GameState, gun: Gun): void {
   if (state.overheated) return;
-  const spd = S('turret', 'bulletSpeed');
-  const spread = S('turret', 'bulletSpread') * Math.PI / 180;
+  const spd = S("turret", "bulletSpeed");
+  const spread = (S("turret", "bulletSpread") * Math.PI) / 180;
   const bx = gun.x + Math.cos(state.gunAngle) * GUN_LENGTH;
   const by = gun.y + Math.sin(state.gunAngle) * GUN_LENGTH;
-  const isExplosive = state.activePowerups.has('explosive');
+  const isExplosive = state.activePowerups.has("explosive");
 
-  if (state.activePowerups.has('triple')) {
+  if (state.activePowerups.has("triple")) {
     for (let s = -1; s <= 1; s++) {
       const a = state.gunAngle + s * 0.12 + (Math.random() - 0.5) * spread;
-      state.bullets.push({ x: bx, y: by, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, explosive: isExplosive });
+      state.bullets.push({
+        x: bx,
+        y: by,
+        vx: Math.cos(a) * spd,
+        vy: Math.sin(a) * spd,
+        explosive: isExplosive,
+      });
     }
   } else {
     const a = state.gunAngle + (Math.random() - 0.5) * spread;
-    state.bullets.push({ x: bx, y: by, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, explosive: isExplosive });
+    state.bullets.push({
+      x: bx,
+      y: by,
+      vx: Math.cos(a) * spd,
+      vy: Math.sin(a) * spd,
+      explosive: isExplosive,
+    });
   }
 
-  const heatCost = state.activePowerups.has('rapid') ? 2 : S('turret', 'heatPerShot');
+  const heatCost = state.activePowerups.has("rapid")
+    ? 2
+    : S("turret", "heatPerShot");
   state.heat = Math.min(MAX_HEAT, state.heat + heatCost);
   if (state.heat >= MAX_HEAT) {
     state.overheated = true;
-    state.overheatTimer = S('turret', 'overheatCooldown');
+    state.overheatTimer = S("turret", "overheatCooldown");
   }
 }

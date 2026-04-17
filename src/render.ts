@@ -32,7 +32,7 @@ function drawHeatWarning(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElemen
     ctx.lineWidth = 1;
     ctx.strokeRect(bx, by, barW, barH);
     ctx.restore();
-  } else if (ratio > 0.7) {
+  } else if (ratio > 0.5) {
     // Pulsing warning approaching overheat
     const intensity = (ratio - 0.7) / 0.3; // 0..1
     const pulse = 0.4 + Math.sin(state.frame * 0.25) * 0.4;
