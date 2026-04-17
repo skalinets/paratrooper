@@ -86,7 +86,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.hypot(m.x - h.x, m.y - h.y) < 25) {
         addExplosion(state, h.x, h.y, 30);
         addKill(state, 50, h.x, h.y);
-        spawnDebris(state, h.x, h.y, 24, ['#888','#adf','#777','#bbb','#ccc','#999']);
+        spawnDebris(state, h.x, h.y, 48, ['#888','#adf','#777','#bbb','#ccc','#999']);
         state.helicopters.splice(j, 1);
         hit = true; break;
       }
@@ -96,7 +96,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.hypot(m.x - jt.x, m.y - jt.y) < 20) {
         addExplosion(state, jt.x, jt.y, 25);
         addKill(state, 100, jt.x, jt.y);
-        spawnDebris(state, jt.x, jt.y, 20, ['#aa4444','#884444','#993333','#ddf','#aa4444']);
+        spawnDebris(state, jt.x, jt.y, 40, ['#aa4444','#884444','#993333','#ddf','#aa4444']);
         state.jets.splice(j, 1);
         hit = true; break;
       }
@@ -208,8 +208,8 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.abs(b.x - pu.x) < puHit && Math.abs(b.y - pu.y) < puHit) {
         state.bullets.splice(j, 1);
         if (pu.type === 'nuke') {
-          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 24, ['#888','#adf','#777','#bbb','#ccc','#999']); });
-          state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 20, ['#aa4444','#884444','#993333','#ddf','#aa4444']); });
+          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 48, ['#888','#adf','#777','#bbb','#ccc','#999']); });
+          state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 40, ['#aa4444','#884444','#993333','#ddf','#aa4444']); });
           state.bombs.forEach(bm => { addExplosion(state, bm.x, bm.y, 15); });
           for (let k = state.paratroopers.length - 1; k >= 0; k--) {
             const p = state.paratroopers[k];
@@ -314,7 +314,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         state.helicopters.splice(i, 1);
         state.bullets.splice(j, 1);
         addKill(state, 50, ex, ey);
-        spawnDebris(state, ex, ey, 6, ['#888','#aaa','#667']);
+        spawnDebris(state, ex, ey, 12, ['#888','#aaa','#667']);
         if (b.explosive) explosiveBlast(state, ex, ey);
         break;
       }
@@ -341,7 +341,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
         state.jets.splice(i, 1);
         state.bullets.splice(k, 1);
         addKill(state, 100, ex, ey);
-        spawnDebris(state, ex, ey, 5, ['#a44','#844','#933']);
+        spawnDebris(state, ex, ey, 10, ['#a44','#844','#933']);
         if (b.explosive) explosiveBlast(state, ex, ey);
         break;
       }
