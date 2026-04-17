@@ -1,7 +1,7 @@
 # Paratrooper - Project Guide
 
 ## Overview
-Browser-based arcade game inspired by the classic Paratrooper. Single-page Canvas game built with TypeScript, bundled with Bun, deployed to Cloudflare Pages.
+Browser arcade game, classic Paratrooper style. Single-page Canvas, TypeScript, Bun bundle, Cloudflare Pages deploy.
 
 ## Architecture
 ```
@@ -19,61 +19,61 @@ src/
 ```
 
 ## Commands
-- `make build` - Bundle + minify with Bun → dist/
-- `make test` - Run tests with Bun
-- `make lint` - Lint with oxlint
+- `make build` - Bundle + minify Bun → dist/
+- `make test` - Tests Bun
+- `make lint` - Lint oxlint
 - `make check` - Lint + test
-- `make serve` - Docker Compose nginx on localhost:3000
+- `make serve` - Docker Compose nginx localhost:3000
 - `make stop` - Stop local server
-- `make deploy` - Build + deploy to Cloudflare Pages
-- `make dev` - Build unminified + open locally
+- `make deploy` - Build + deploy Cloudflare Pages
+- `make dev` - Build unminified + open local
 
 ## Workflow
-1. Always work in a git worktree for feature branches
-2. Run `make check` before committing
-3. Commit and push before running the local game
-4. Update GAME.md when adding/changing mechanics
-5. Reference GAME.md spec when implementing features
+1. Work in git worktree for feature branch
+2. Run `make check` before commit
+3. Commit + push before run local game
+4. Update GAME.md when mechanics change
+5. Reference GAME.md spec when implement features
 
 ## Code Conventions
 - **TypeScript strict mode** - `strict: true`, `noUncheckedIndexedAccess: true`
-- **No `any` types** - Use proper interfaces from `types.ts`
-- **Guard against NaN/undefined** - Use type narrowing, default values, and `??` operator
-- **All game functions take `state` as first parameter** - No module-level mutable globals
-- **`createState()` factory** - Creates fresh state for testing
-- **Tests for every module** - Cover edge cases (empty arrays, NaN inputs, boundary conditions)
+- **No `any` types** - Use interfaces from `types.ts`
+- **Guard NaN/undefined** - Type narrowing, defaults, `??` operator
+- **Game functions take `state` first param** - No module-level globals
+- **`createState()` factory** - Fresh state for tests
+- **Tests every module** - Cover edges (empty arrays, NaN, boundaries)
 
 ## Subagents
-Configured in `.claude/settings.json`:
-- **game-designer** - Game balance analysis, mechanics proposals, references GAME.md
-- **qa-tester** - Interactive browser QA: opens game, monitors console while developer plays
-- **ts-migrator** - TypeScript strict mode enforcement, type safety
+Configured `.claude/settings.json`:
+- **game-designer** - Balance analysis, mechanics proposals, reads GAME.md
+- **qa-tester** - Browser QA: opens game, watches console while dev plays
+- **ts-migrator** - TypeScript strict enforcement, type safety
 
 ## Workflow
-1. Work in git worktrees for feature branches
-2. Run `make check` (lint + typecheck + test) before committing
-3. Commit and push before running local game
-4. Update GAME.md when adding/changing mechanics
-5. Reference GAME.md spec when implementing features
+1. Work git worktrees for feature branches
+2. Run `make check` (lint + typecheck + test) before commit
+3. Commit + push before run local game
+4. Update GAME.md when mechanics change
+5. Reference GAME.md spec when implement features
 6. Use subagents: game-designer for balance, qa-tester for bugs, ts-migrator for types
 
 ## Game Spec
-See `GAME.md` for complete game mechanics documentation. Always keep it current.
+See `GAME.md` for full mechanics docs. Keep current.
 
 ## Key Types
-- `GameState` - Central mutable state object
+- `GameState` - Central mutable state
 - `Helicopter`, `Jet`, `Paratrooper`, `Bomb`, `Bullet` - Entity types
-- `Explosion`, `FloatingText` - Visual effect types
+- `Explosion`, `FloatingText` - Visual effects
 - `PowerUp`, `ActivePowerUp` - Power-up types
-- `Settings` - Nested settings with `{val, min, max, step, label}`
-- `Gun` - Turret position and dimensions
+- `Settings` - Nested `{val, min, max, step, label}`
+- `Gun` - Turret position + dims
 
 ## Testing
 - Use `bun:test` (describe/test/expect)
-- `createState()` for fresh state in every test
-- Mock canvas dimensions via state/gun objects
-- Test edge cases: empty arrays, zero values, boundary collisions, NaN guards
-- No browser globals needed - config/state handle `typeof window` checks
+- `createState()` fresh state each test
+- Mock canvas dims via state/gun objects
+- Test edges: empty arrays, zeros, boundary collisions, NaN guards
+- No browser globals - config/state handle `typeof window` checks
 
 ## Deployment
 - **Prod**: Cloudflare Pages at paratrooper.pages.dev
