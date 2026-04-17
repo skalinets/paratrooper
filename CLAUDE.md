@@ -29,11 +29,13 @@ src/
 - `make dev` - Build unminified + open local
 
 ## Workflow
-1. Work in git worktree for feature branch
-2. Run `make check` before commit
-3. Commit + push before run local game
-4. Update GAME.md when mechanics change
-5. Reference GAME.md spec when implement features
+1. **Always** work in git worktree under `.claude/worktrees/<name>` on a dedicated feature branch. Never commit on `main` directly.
+2. Run `make check` (lint + typecheck + test) before commit
+3. Commit + push feature branch
+4. Open PR via `gh pr create` when work done; wait for review/merge
+5. After PR merged: delete local branch, remote branch, and worktree (`git worktree remove`)
+6. Update GAME.md when mechanics change; reference GAME.md spec when implement features
+7. Use subagents: game-designer for balance, qa-tester for bugs, ts-migrator for types
 
 ## Code Conventions
 - **TypeScript strict mode** - `strict: true`, `noUncheckedIndexedAccess: true`
@@ -48,14 +50,6 @@ Configured `.claude/settings.json`:
 - **game-designer** - Balance analysis, mechanics proposals, reads GAME.md
 - **qa-tester** - Browser QA: opens game, watches console while dev plays
 - **ts-migrator** - TypeScript strict enforcement, type safety
-
-## Workflow
-1. Work git worktrees for feature branches
-2. Run `make check` (lint + typecheck + test) before commit
-3. Commit + push before run local game
-4. Update GAME.md when mechanics change
-5. Reference GAME.md spec when implement features
-6. Use subagents: game-designer for balance, qa-tester for bugs, ts-migrator for types
 
 ## Game Spec
 See `GAME.md` for full mechanics docs. Keep current.
