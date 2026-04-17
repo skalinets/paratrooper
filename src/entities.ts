@@ -1,23 +1,26 @@
-import { S, isMobile } from './config';
+import { S } from './config';
 import type { GameState } from './types';
+
+function randTint(): number {
+  return (Math.random() - 0.5) * 40;
+}
 
 export function spawnHelicopter(state: GameState, canvas: HTMLCanvasElement, forceDir?: number): void {
   const fromLeft = forceDir != null ? (forceDir > 0) : (Math.random() < 0.5);
   const speed = S('helicopter', 'speed') + state.wave * S('helicopter', 'waveSpeedBonus');
-  const yRange = isMobile ? 180 : 120;
-  const baseY = isMobile ? 40 : 50;
   state.helicopters.push({
     x: fromLeft ? -60 : canvas.width + 60,
-    y: baseY + Math.random() * yRange,
+    y: 40 + Math.random() * 180,
     dir: fromLeft ? 1 : -1,
     speed,
     dropTimer: 40 + Math.random() * 60,
     dropped: false,
     width: 55,
     height: 20,
-    bobAmp: isMobile ? (8 + Math.random() * 12) : 0,
+    bobAmp: 8 + Math.random() * 12,
     bobFreq: 0.02 + Math.random() * 0.02,
     bobPhase: Math.random() * Math.PI * 2,
+    tint: randTint(),
   });
 }
 
@@ -32,6 +35,7 @@ export function spawnJet(state: GameState, canvas: HTMLCanvasElement): void {
     dropped: false,
     width: 50,
     height: 14,
+    tint: randTint(),
   });
 }
 
@@ -46,5 +50,6 @@ export function spawnParatrooper(state: GameState, x: number, y: number): void {
     wobbleAmp: 0.3 + Math.random() * 0.5,
     wobbleFreq: 0.02 + Math.random() * 0.03,
     wobblePhase: Math.random() * Math.PI * 2,
+    tint: randTint(),
   });
 }

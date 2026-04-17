@@ -39,6 +39,6 @@ export const desktopDefaults: ConfigValues = {
   powerups: {
     duration: 720,
     missileRate: 60,
-    missileSpeed: 6,
+    missileSpeed: 4,
   },
 };
