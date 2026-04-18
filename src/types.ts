@@ -257,4 +257,6 @@ export interface GameState {
   settingsDrillDown: boolean;
   // Night mode
   nightMode: boolean;
+  // 0 = full day, 1 = full night; tweens toward nightMode each frame
+  dayNight: number;
 }

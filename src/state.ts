@@ -55,6 +55,7 @@ export function createState(): GameState {
     settingsParam: 0,
     settingsDrillDown: false,
     nightMode: false,
+    dayNight: 0,
   };
 }
 
