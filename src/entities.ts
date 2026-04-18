@@ -48,7 +48,7 @@ export function spawnParatrooper(state: GameState, x: number, y: number): void {
     chuteTimer: baseDelay + waveBonus,
     landed: false, alive: true,
     wobbleAmp: 0.3 + Math.random() * 0.5,
-    wobbleFreq: 0.02 + Math.random() * 0.03,
+    wobbleFreq: 0.008 + Math.random() * 0.012,
     wobblePhase: Math.random() * Math.PI * 2,
     tint: randTint(),
   });

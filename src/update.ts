@@ -3,7 +3,15 @@ import { addExplosion, addFloatingText, addKill, explosiveBlast, spawnDebris } f
 import { spawnHelicopter, spawnJet, spawnParatrooper } from './entities';
 import type { GameState, Gun } from './types';
 
+function tweenDayNight(state: GameState): void {
+  const target = state.nightMode ? 1 : 0;
+  const rate = 0.008;
+  if (state.dayNight < target) state.dayNight = Math.min(target, state.dayNight + rate);
+  else if (state.dayNight > target) state.dayNight = Math.max(target, state.dayNight - rate);
+}
+
 export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): void {
+  tweenDayNight(state);
   if (!state.started) return;
 
   // Always update explosions & floating texts
@@ -86,7 +94,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.hypot(m.x - h.x, m.y - h.y) < 25) {
         addExplosion(state, h.x, h.y, 30);
         addKill(state, 50, h.x, h.y);
-        spawnDebris(state, h.x, h.y, 48, ['#888','#adf','#777','#bbb','#ccc','#999']);
+        spawnDebris(state, h.x, h.y, 48, ['#6a7a3a','#8e9a4e','#3e4a22','#1e2410','#bbbbc0','#7acfe8']);
         state.helicopters.splice(j, 1);
         hit = true; break;
       }
@@ -208,7 +216,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
       if (Math.abs(b.x - pu.x) < puHit && Math.abs(b.y - pu.y) < puHit) {
         state.bullets.splice(j, 1);
         if (pu.type === 'nuke') {
-          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 48, ['#888','#adf','#777','#bbb','#ccc','#999']); });
+          state.helicopters.forEach(h => { addExplosion(state, h.x, h.y, 25); addKill(state, 50, h.x, h.y); spawnDebris(state, h.x, h.y, 48, ['#6a7a3a','#8e9a4e','#3e4a22','#1e2410','#bbbbc0','#7acfe8']); });
           state.jets.forEach(jt => { addExplosion(state, jt.x, jt.y, 25); addKill(state, 100, jt.x, jt.y); spawnDebris(state, jt.x, jt.y, 40, ['#aa4444','#884444','#993333','#ddf','#aa4444']); });
           state.bombs.forEach(bm => { addExplosion(state, bm.x, bm.y, 15); });
           for (let k = state.paratroopers.length - 1; k >= 0; k--) {
@@ -234,6 +242,15 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     }
   }
 
+  // Freeze auto-terminates when there's nothing left to freeze
+  if (state.activePowerups.has('freeze')) {
+    const hasFreezeTarget =
+      state.helicopters.length > 0 ||
+      state.jets.length > 0 ||
+      state.bombs.length > 0 ||
+      state.paratroopers.some(p => !p.falling && !p.landed);
+    if (!hasFreezeTarget) state.activePowerups.delete('freeze');
+  }
   const frozen: boolean = state.activePowerups.has('freeze');
 
   // Wave logic - pause spawning during freeze
