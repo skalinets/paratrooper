@@ -8,17 +8,26 @@ function randTint(): number {
 export function spawnHelicopter(state: GameState, canvas: HTMLCanvasElement, forceDir?: number): void {
   const fromLeft = forceDir != null ? (forceDir > 0) : (Math.random() < 0.5);
   const speed = S('helicopter', 'speed') + state.wave * S('helicopter', 'waveSpeedBonus');
+  const maxDrops = Math.min(5, state.wave);
+  const dropCount = Math.floor(Math.random() * (maxDrops + 1));
+  const minX = canvas.width * 0.2;
+  const maxX = canvas.width * 0.95;
+  const dropXs: number[] = [];
+  for (let i = 0; i < dropCount; i++) {
+    dropXs.push(minX + Math.random() * (maxX - minX));
+  }
+  // Sort so they trigger in heli's travel order
+  dropXs.sort((a, b) => fromLeft ? a - b : b - a);
   state.helicopters.push({
     x: fromLeft ? -60 : canvas.width + 60,
-    y: 40 + Math.random() * 180,
+    y: 30 + Math.random() * 110,
     dir: fromLeft ? 1 : -1,
     speed,
-    dropTimer: 40 + Math.random() * 60,
-    dropped: false,
+    dropXs,
     width: 55,
     height: 20,
-    bobAmp: 8 + Math.random() * 12,
-    bobFreq: 0.02 + Math.random() * 0.02,
+    bobAmp: 4 + Math.random() * 8,
+    bobFreq: 0.01 + Math.random() * 0.015,
     bobPhase: Math.random() * Math.PI * 2,
     tint: randTint(),
   });
