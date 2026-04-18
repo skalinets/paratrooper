@@ -75,6 +75,7 @@ export interface Helicopter {
   bobAmp: number;
   bobFreq: number;
   bobPhase: number;
+  tint: number;
 }
 
 export interface Jet {
@@ -85,6 +86,7 @@ export interface Jet {
   dropped: boolean;
   width: number;
   height: number;
+  tint: number;
 }
 
 export interface Paratrooper {
@@ -105,6 +107,7 @@ export interface Paratrooper {
   wobbleAmp?: number;
   wobbleFreq?: number;
   wobblePhase?: number;
+  tint: number;
 }
 
 export interface Bomb {

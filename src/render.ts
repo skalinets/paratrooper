@@ -3,6 +3,16 @@ import type { GameState, Gun, Star, Helicopter, Jet, Bomb, Paratrooper, Settings
 
 let nightCanvas: HTMLCanvasElement | null = null;
 
+function shade(hex: string, amt: number): string {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h[0]! + h[0]! + h[1]! + h[1]! + h[2]! + h[2]!;
+  const clamp = (n: number) => Math.max(0, Math.min(255, n | 0));
+  const r = clamp(parseInt(h.slice(0, 2), 16) + amt);
+  const g = clamp(parseInt(h.slice(2, 4), 16) + amt);
+  const b = clamp(parseInt(h.slice(4, 6), 16) + amt);
+  return `rgb(${r},${g},${b})`;
+}
+
 function drawHeatWarning(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: GameState): void {
   const ratio = state.heat / MAX_HEAT;
 
@@ -146,19 +156,19 @@ function drawHelicopter(ctx: CanvasRenderingContext2D, h: Helicopter, frame: num
   ctx.scale(h.dir, 1);
 
   // Body ellipse
-  ctx.fillStyle = '#888';
+  ctx.fillStyle = shade('#888', h.tint);
   ctx.beginPath();
   ctx.ellipse(0, 0, 30, 14, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Cockpit
-  ctx.fillStyle = '#adf';
+  ctx.fillStyle = shade('#adf', h.tint);
   ctx.beginPath();
   ctx.ellipse(14, -2, 12, 9, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Tail
-  ctx.fillStyle = '#777';
+  ctx.fillStyle = shade('#777', h.tint);
   ctx.beginPath();
   ctx.moveTo(-20, 0);
   ctx.lineTo(-38, -8);
@@ -200,13 +210,13 @@ function drawJet(ctx: CanvasRenderingContext2D, j: Jet): void {
   ctx.scale(j.dir, 1);
 
   // Red fuselage
-  ctx.fillStyle = '#aa4444';
+  ctx.fillStyle = shade('#aa4444', j.tint);
   ctx.beginPath();
   ctx.ellipse(0, 0, 28, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Wings
-  ctx.fillStyle = '#884444';
+  ctx.fillStyle = shade('#884444', j.tint);
   ctx.beginPath();
   ctx.moveTo(-5, 0);
   ctx.lineTo(-18, 18);
@@ -222,7 +232,7 @@ function drawJet(ctx: CanvasRenderingContext2D, j: Jet): void {
   ctx.fill();
 
   // Tail fin
-  ctx.fillStyle = '#993333';
+  ctx.fillStyle = shade('#993333', j.tint);
   ctx.beginPath();
   ctx.moveTo(-22, 0);
   ctx.lineTo(-28, -12);
@@ -324,7 +334,7 @@ function drawParatrooper(ctx: CanvasRenderingContext2D, p: Paratrooper, frame: n
 
   if (p.chuteOpen && !p.landed) {
     // Parachute canopy - red with white stripes
-    ctx.fillStyle = '#d44';
+    ctx.fillStyle = shade('#d44', p.tint);
     ctx.beginPath();
     ctx.arc(0, -40, 26, Math.PI, 0);
     ctx.fill();
@@ -357,11 +367,11 @@ function drawParatrooper(ctx: CanvasRenderingContext2D, p: Paratrooper, frame: n
   ctx.fill();
 
   // Torso
-  ctx.fillStyle = '#4a4';
+  ctx.fillStyle = shade('#4a4', p.tint);
   ctx.fillRect(-5, -6, 10, 12);
 
   // Arms
-  ctx.strokeStyle = '#4a4';
+  ctx.strokeStyle = shade('#4a4', p.tint);
   ctx.lineWidth = 3;
 
   if (!p.landed && !p.chuteOpen) {
@@ -393,7 +403,7 @@ function drawParatrooper(ctx: CanvasRenderingContext2D, p: Paratrooper, frame: n
   }
 
   // Legs
-  ctx.strokeStyle = '#383';
+  ctx.strokeStyle = shade('#383', p.tint);
   ctx.lineWidth = 3;
 
   if (!p.landed && !p.chuteOpen) {
