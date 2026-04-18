@@ -260,7 +260,7 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     // don't return - let bullets and other entities still update
   } else if (state.waveActive && !frozen) {
     state.waveSpawnTimer++;
-    const spawnRate = isMobile ? Math.max(30, 90 - state.wave * 10) : Math.max(40, 120 - state.wave * 10);
+    const spawnRate = isMobile ? Math.max(30, 90 - state.wave * 10) : Math.max(50, 130 - state.wave * 8);
     if (state.waveSpawnTimer >= spawnRate) {
       state.waveSpawnTimer = 0;
       if (state.waveHelisSpawned < state.waveHeliCount) {
@@ -309,16 +309,16 @@ export function update(state: GameState, canvas: HTMLCanvasElement, gun: Gun): v
     if (!h) continue;
     if (!frozen) {
       h.x += h.dir * h.speed;
-      h.dropTimer--;
       if (h.bobAmp) {
         h.y += Math.cos(state.frame * h.bobFreq + h.bobPhase) * h.bobAmp * 0.05;
       }
     }
-    if (h.dropTimer <= 0 && !h.dropped) {
-      if (Math.abs(h.x - gun.x) > 80) {
-        spawnParatrooper(state, h.x, h.y + 15);
-        h.dropped = true;
-      }
+    while (h.dropXs.length > 0) {
+      const nextX = h.dropXs[0]!;
+      const reached = h.dir > 0 ? h.x >= nextX : h.x <= nextX;
+      if (!reached) break;
+      h.dropXs.shift();
+      if (Math.abs(h.x - gun.x) > 80) spawnParatrooper(state, h.x, h.y + 15);
     }
     if ((h.dir > 0 && h.x > canvas.width + 80) || (h.dir < 0 && h.x < -80)) {
       state.helicopters.splice(i, 1); continue;
@@ -523,9 +523,9 @@ export function startWave(state: GameState): void {
   state.waveAnnounceTimer = 120;
   state.wavePause = 0;
   state.waveActive = false;
-  const mobileScale = isMobile ? 1.4 : 1.0;
-  state.waveHeliCount = Math.floor((3 + Math.floor(state.wave * 1.5)) * mobileScale);
-  state.waveJetCount = state.wave >= 2 ? Math.floor(Math.floor(state.wave / 2) * mobileScale) : 0;
+  const densityScale = isMobile ? 1.4 : 0.85;
+  state.waveHeliCount = Math.max(3, Math.floor((3 + Math.floor(state.wave * 1.5)) * densityScale));
+  state.waveJetCount = state.wave >= 2 ? Math.floor(Math.floor(state.wave / 2) * densityScale) : 0;
   if (isMobile && state.wave >= 1) state.waveJetCount = Math.max(1, state.waveJetCount);
   state.waveHelisSpawned = 0;
   state.waveJetsSpawned = 0;

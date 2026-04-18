@@ -68,8 +68,7 @@ export interface Helicopter {
   y: number;
   dir: 1 | -1;
   speed: number;
-  dropTimer: number;
-  dropped: boolean;
+  dropXs: number[];
   width: number;
   height: number;
   bobAmp: number;
